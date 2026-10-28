@@ -1,0 +1,42 @@
+{
+  "status": "optimal",
+  "answer": {
+    "modules": [
+      {
+        "module": "Route",
+        "naive": 80,
+        "optimized": 70,
+        "unit": "minutes",
+        "gain_pct": 12.5,
+        "direction": "lower_is_better"
+      },
+      {
+        "module": "Assignment",
+        "naive": 414,
+        "optimized": 445,
+        "unit": "score",
+        "gain_pct": 7.5,
+        "direction": "higher_is_better"
+      },
+      {
+        "module": "Crafting",
+        "naive": null,
+        "optimized": 117,
+        "unit": "score",
+        "gain_pct": null,
+        "direction": "higher_is_better"
+      },
+      {
+        "module": "Whole pipeline",
+        "naive": null,
+        "optimized": 562,
+        "unit": "score",
+        "gain_pct": null,
+        "direction": "higher_is_better"
+      }
+    ],
+    "random_maps": null
+  },
+  "steps": [],
+  "_fixture_note": "The plan does not define this response shape: the module table is a proposal (see docs/api-contract.md). naive crafting, naive pipeline and the 20-map summary are null because the plan says the team computes them."
+}

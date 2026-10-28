@@ -1,0 +1,18 @@
+:root {
+  --bg: #0f1420;
+  --panel: #171e2e;
+  --text: #e6e9f0;
+  --muted: #8b94a8;
+  --accent: #4cc9f0;
+  --danger: #ef476f;
+  --ok: #06d6a0;
+  font-family: system-ui, sans-serif;
+}
+body { margin: 0; background: var(--bg); color: var(--text); }
+.app { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.tabs { display: flex; gap: 8px; border-bottom: 1px solid #2a3350; margin-bottom: 16px; }
+.tabs button { background: none; border: 0; color: var(--muted); padding: 10px 16px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--accent); border-bottom: 2px solid var(--accent); }
+.panel { background: var(--panel); border-radius: 8px; padding: 16px; }
+.error { color: var(--danger); }
+.todo { color: var(--muted); font-style: italic; }

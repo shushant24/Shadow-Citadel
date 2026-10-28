@@ -1,0 +1,144 @@
+{
+  "status": "optimal",
+  "answer": {
+    "tour": [
+      "Base",
+      "C2",
+      "C1",
+      "C6",
+      "C3",
+      "C4",
+      "C5",
+      "C7",
+      "Base"
+    ],
+    "cost": 70,
+    "relaxation_cost": 64,
+    "first_subtours": [
+      [
+        "Base",
+        "C7",
+        "C5"
+      ],
+      [
+        "C1",
+        "C6",
+        "C3",
+        "C4",
+        "C2"
+      ]
+    ],
+    "nearest_neighbour": {
+      "tour": [
+        "Base",
+        "C7",
+        "C5",
+        "C3",
+        "C4",
+        "C1",
+        "C6",
+        "C2",
+        "Base"
+      ],
+      "cost": 80
+    }
+  },
+  "steps": [
+    {
+      "node": 1,
+      "forbidden_arcs": [],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C7",
+          "C5"
+        ],
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "C1",
+          "C6"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C3",
+          "C4"
+        ],
+        [
+          "C4",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ]
+      ],
+      "cost": 64,
+      "subtours": [
+        [
+          "Base",
+          "C7",
+          "C5"
+        ],
+        [
+          "C1",
+          "C6",
+          "C3",
+          "C4",
+          "C2"
+        ]
+      ],
+      "status": "branch"
+    },
+    {
+      "node": 2,
+      "forbidden_arcs": [],
+      "assignment": [
+        [
+          "Base",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C1",
+          "C6"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C3",
+          "C4"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [],
+      "status": "feasible"
+    }
+  ],
+  "_fixture_note": "Only the root node (cost 64, two subtours) and the optimal leaf (cost 70) are real. Intermediate B&B nodes are omitted: Part 4 should replace this with the real trace."
+}

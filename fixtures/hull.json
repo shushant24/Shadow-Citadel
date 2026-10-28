@@ -1,0 +1,199 @@
+{
+  "status": "optimal",
+  "answer": {
+    "vertices": [
+      "Base",
+      "L4",
+      "C2",
+      "L1",
+      "L2",
+      "C6",
+      "C5"
+    ],
+    "interior": [
+      "C1",
+      "C3",
+      "C4",
+      "C7",
+      "L3"
+    ]
+  },
+  "steps": [
+    {
+      "action": "push",
+      "point": "L4",
+      "stack": [
+        "Base",
+        "L4"
+      ]
+    },
+    {
+      "action": "push",
+      "point": "C2",
+      "stack": [
+        "Base",
+        "L4",
+        "C2"
+      ]
+    },
+    {
+      "action": "push",
+      "point": "L1",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1"
+      ]
+    },
+    {
+      "action": "push",
+      "point": "C1",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "C1"
+      ]
+    },
+    {
+      "action": "push",
+      "point": "C4",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "C1",
+        "C4"
+      ]
+    },
+    {
+      "action": "pop",
+      "point": "C4",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "C1"
+      ]
+    },
+    {
+      "action": "pop",
+      "point": "C1",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1"
+      ]
+    },
+    {
+      "action": "push",
+      "point": "L2",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "L2"
+      ]
+    },
+    {
+      "action": "push",
+      "point": "C3",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "L2",
+        "C3"
+      ]
+    },
+    {
+      "action": "pop",
+      "point": "C3",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "L2"
+      ]
+    },
+    {
+      "action": "push",
+      "point": "C7",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "L2",
+        "C7"
+      ]
+    },
+    {
+      "action": "pop",
+      "point": "C7",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "L2"
+      ]
+    },
+    {
+      "action": "push",
+      "point": "L3",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "L2",
+        "L3"
+      ]
+    },
+    {
+      "action": "pop",
+      "point": "L3",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "L2"
+      ]
+    },
+    {
+      "action": "push",
+      "point": "C6",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "L2",
+        "C6"
+      ]
+    },
+    {
+      "action": "push",
+      "point": "C5",
+      "stack": [
+        "Base",
+        "L4",
+        "C2",
+        "L1",
+        "L2",
+        "C6",
+        "C5"
+      ]
+    }
+  ]
+}

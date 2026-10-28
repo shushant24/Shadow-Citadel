@@ -1,0 +1,24 @@
+{
+  "status": "optimal",
+  "answer": {
+    "x": [
+      7,
+      0,
+      4,
+      3
+    ],
+    "z": 117,
+    "shadow_prices": {
+      "time": 0.75,
+      "weight": 0.5,
+      "slots": 4.25
+    },
+    "binding": [
+      "time",
+      "weight",
+      "slots"
+    ]
+  },
+  "steps": [],
+  "_fixture_note": "Answer is the Section 4 expected result. Simplex tableau steps are empty until Part 1 produces real iterations (the plan gives no intermediate tableaus)."
+}

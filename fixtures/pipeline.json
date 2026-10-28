@@ -1,0 +1,11 @@
+{
+  "status": "optimal",
+  "answer": {
+    "tour_time": 70,
+    "craft_time": 50,
+    "combat": 445,
+    "crafting": 117,
+    "total": 562
+  },
+  "steps": []
+}
