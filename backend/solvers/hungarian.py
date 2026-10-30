@@ -15,6 +15,7 @@ from typing import Any, Sequence
 from envelope import envelope
 
 MAX_SCORE_MAGNITUDE = 1e12
+MAX_ASSIGNMENT_DIMENSION = 20
 Matrix = list[list[Fraction]]
 
 
@@ -44,6 +45,8 @@ def _validate(scores: Sequence[Sequence[Real]], maximize: bool) -> list[list[Fra
         raise AssignmentError("maximize must be a boolean.")
     if isinstance(scores, (str, bytes)) or not isinstance(scores, Sequence) or len(scores) == 0:
         raise AssignmentError("scores must be a non-empty rectangular matrix.")
+    if len(scores) > MAX_ASSIGNMENT_DIMENSION:
+        raise AssignmentError(f"scores cannot have more than {MAX_ASSIGNMENT_DIMENSION} rows.")
 
     result: list[list[Fraction]] = []
     width: int | None = None
@@ -52,6 +55,8 @@ def _validate(scores: Sequence[Sequence[Real]], maximize: bool) -> list[list[Fra
             raise AssignmentError(f"scores row {ri} must be a non-empty list.")
         if width is None:
             width = len(row)
+            if width > MAX_ASSIGNMENT_DIMENSION:
+                raise AssignmentError(f"scores cannot have more than {MAX_ASSIGNMENT_DIMENSION} columns.")
         elif len(row) != width:
             raise AssignmentError("scores must be rectangular: every row needs the same number of columns.")
 
@@ -277,4 +282,4 @@ def solve_assignment(scores: Sequence[Sequence[Real]], maximize: bool = True) ->
     return envelope("optimal", answer, steps)
 
 
-__all__ = ["AssignmentError", "MAX_SCORE_MAGNITUDE", "solve_assignment"]
+__all__ = ["AssignmentError", "MAX_ASSIGNMENT_DIMENSION", "MAX_SCORE_MAGNITUDE", "solve_assignment"]

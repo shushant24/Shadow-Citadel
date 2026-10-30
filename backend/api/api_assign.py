@@ -8,11 +8,14 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
-from solvers.hungarian import AssignmentError, MAX_SCORE_MAGNITUDE, solve_assignment
+from solvers.hungarian import (
+    AssignmentError,
+    MAX_ASSIGNMENT_DIMENSION,
+    MAX_SCORE_MAGNITUDE,
+    solve_assignment,
+)
 
 router = APIRouter()
-
-MAX_ASSIGNMENT_DIMENSION = 20
 
 
 class AssignRequest(BaseModel):
