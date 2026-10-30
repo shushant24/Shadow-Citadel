@@ -3,6 +3,25 @@
 from __future__ import annotations
 
 
+def validate_inputs(c, A, b, senses) -> None:
+    """Validate input dimensions and values."""
+    if not isinstance(c, (list, tuple)) or len(c) == 0:
+        raise ValueError("c must be a non-empty list of coefficients")
+    n_vars = len(c)
+    if not isinstance(A, (list, tuple)) or not isinstance(b, (list, tuple)) or not isinstance(senses, (list, tuple)):
+        raise ValueError("A, b, and senses must be lists or tuples")
+    m_cons = len(A)
+    if len(b) != m_cons or len(senses) != m_cons:
+        raise ValueError(f"Length mismatch: len(A)={m_cons}, len(b)={len(b)}, len(senses)={len(senses)}")
+    for i, row in enumerate(A):
+        if not isinstance(row, (list, tuple)) or len(row) != n_vars:
+            actual_len = len(row) if isinstance(row, (list, tuple)) else "N/A"
+            raise ValueError(f"Row {i} of A has length {actual_len}, expected {n_vars}")
+    for i, s in enumerate(senses):
+        if s not in {"<=", ">=", "="}:
+            raise ValueError(f"Invalid sense {s!r} at index {i}; must be '<=', '>=', or '='")
+
+
 class Tableau:
     """Tableau with pivoting. Every pivot appends one item to `steps` in the craft step format
     (docs/api-contract.md, validated by contract.py).
@@ -14,17 +33,19 @@ class Tableau:
     self.zrow_m  = z_j - c_j row (Big-M part)         (length = n_cols + 1)
     self.columns = variable names (length = n_cols)
     self.basis   = current basic variable names per row
+    self.excluded_columns = columns forbidden from entering the basis (e.g. artificials in Phase 2)
     """
 
     def __init__(self, columns: list[str], basis: list[str],
                  tab: list[list[float]], zrow_c: list[float], zrow_m: list[float],
-                 phase: str = "bigm"):
+                 phase: str = "bigm", excluded_columns: set[str] | list[str] | None = None):
         self.columns = list(columns)
         self.basis = list(basis)
         self.tab = [list(row) for row in tab]
         self.zrow_c = list(zrow_c)
         self.zrow_m = list(zrow_m)
         self.phase = phase
+        self.excluded_columns = set(excluded_columns or [])
         self.steps: list[dict] = []
         self._iteration = 0
 
@@ -65,13 +86,17 @@ class Tableau:
     # ------------------------------------------------------------------ pivot selection
     def _entering_column(self, blands: bool = False) -> int | None:
         """Find entering variable (most negative z_j - c_j, lexicographic on (m, c)).
-        With Bland's rule, pick the smallest-index column with a negative indicator."""
+        Excluded columns (such as artificial columns in Phase 2) are skipped.
+        With Bland's rule, pick the smallest-index eligible column with a negative indicator."""
         best_col = None
         best_m = 0.0
         best_c = 0.0
         eps = -1e-10
 
         for j in range(self.n_cols):
+            if self.columns[j] in self.excluded_columns:
+                continue
+
             m_val = self.zrow_m[j]
             c_val = self.zrow_c[j]
             # A column is a candidate if its (m, c) indicator is negative
@@ -178,13 +203,21 @@ class Tableau:
     def solve(self, max_iters: int = 1000, blands: bool = False) -> str:
         """Run the simplex method on this tableau.
 
-        Returns "optimal", "infeasible", or "unbounded".
+        Returns "optimal", "unbounded", or "iteration_limit".
         Populates self.steps with one snapshot per iteration (iter 0 = initial).
-        If the standard rule cycles (same basis twice), automatically switches to Bland's.
+        If cycling is detected (repeated basis), seamlessly switches to Bland's rule in-place
+        without erasing prior step history.
         """
-        seen_bases: set[tuple[str, ...]] | None = None if blands else set()
+        seen_bases: set[tuple[str, ...]] = set()
 
         for _ in range(max_iters):
+            basis_key = tuple(sorted(self.basis))
+            if not blands:
+                if basis_key in seen_bases:
+                    blands = True
+                else:
+                    seen_bases.add(basis_key)
+
             col = self._entering_column(blands=blands)
 
             if col is None:
@@ -208,24 +241,10 @@ class Tableau:
             self.steps.append(self._snapshot(entering, leaving, [row, col]))
             self._iteration += 1
 
-            # Cycle detection (before Bland's)
-            if seen_bases is not None:
-                key = tuple(sorted(self.basis))
-                if key in seen_bases:
-                    # Detected cycling, restart with Bland's rule
-                    self.steps.clear()
-                    self._iteration = 0
-                    return self._solve_blands(max_iters)
-                seen_bases.add(key)
-
             self.pivot(row, col)
 
-        # Should not reach here
-        return "optimal"
-
-    def _solve_blands(self, max_iters: int = 1000) -> str:
-        """Restart solve with Bland's rule (called when cycling is detected)."""
-        return self.solve(max_iters=max_iters, blands=True)
+        # Iteration limit reached without reaching optimality
+        return "iteration_limit"
 
     # ------------------------------------------------------------------ reading results
     def get_solution(self) -> list[float]:
@@ -245,7 +264,6 @@ class Tableau:
 
 
 def solve(c, A, b, senses, maximize=True):
-    """Convenience wrapper — delegates to bigm or twophase depending on the problem.
-    For direct use, prefer solve_bigm or solve_twophase from their modules."""
+    """Convenience wrapper — delegates to bigm."""
     from solvers.bigm import solve_bigm
     return solve_bigm(c, A, b, senses, maximize=maximize)

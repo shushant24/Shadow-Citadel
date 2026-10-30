@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from envelope import envelope
-from solvers.simplex import Tableau
+from solvers.simplex import Tableau, validate_inputs
 
 
 def solve_twophase(c, A, b, senses, maximize=True):
@@ -14,6 +14,8 @@ def solve_twophase(c, A, b, senses, maximize=True):
     equality constraint (slots) can still be read from column a<i>. See fixtures/craft_twophase.json.
     Infeasible: phase 1 ends with a positive objective.
     """
+    validate_inputs(c, A, b, senses)
+
     n_vars = len(c)
     m_cons = len(A)
 
@@ -50,8 +52,9 @@ def solve_twophase(c, A, b, senses, maximize=True):
         columns.append(name)
 
     n_total = len(columns)
+    col_idx_map = {name: idx for idx, name in enumerate(columns)}
 
-    # Build the tableau rows (same as bigm)
+    # Build the tableau rows
     tab = []
     basis: list[str] = []
 
@@ -62,16 +65,13 @@ def solve_twophase(c, A, b, senses, maximize=True):
         row[-1] = float(b[i])
 
         for name, ci in slack_surplus_cols:
-            col_idx = columns.index(name)
             if ci == i:
-                if senses[i] == "<=":
-                    row[col_idx] = 1.0
-                elif senses[i] == ">=":
-                    row[col_idx] = -1.0
+                col_idx = col_idx_map[name]
+                row[col_idx] = 1.0 if senses[i] == "<=" else -1.0
 
         for name, ci in artificial_cols:
-            col_idx = columns.index(name)
             if ci == i:
+                col_idx = col_idx_map[name]
                 row[col_idx] = 1.0
 
         tab.append(row)
@@ -82,33 +82,17 @@ def solve_twophase(c, A, b, senses, maximize=True):
             basis.append(f"a{i+1}")
 
     # ================================================================ Phase 1
-    # Objective: minimize sum of artificial variables
-    # z_j - c_j for Phase 1: cost of artificials = 1, everything else = 0
-    # Initial z_j - c_j = -cost_j for non-basic columns
-    # For artificials (basic): cost = 1, need to eliminate from z-row
-
+    # Objective: minimize sum of artificial variables (maximize -sum(a_i))
     zrow_c_p1 = [0.0] * (n_total + 1)
     zrow_m_p1 = [0.0] * (n_total + 1)  # always zero in two-phase
 
-    # Set costs for artificial columns in z-row (before basis elimination)
-    # Phase 1 minimizes sum(a_i), so cost of a_i = 1
-    # z_j - c_j for a_i = 0 - (-1) = 1  (we minimize, so objective row has -cost)
-    # Actually in the standard min form: z_j - c_j = -c_j for non-basic vars
-    # where c_j = -1 for artificials (we want to minimize sum, which is maximize negative sum)
-    # Let me think about this more carefully.
-    #
-    # We minimize w = sum(a_i). In z-row form (maximize -w = -sum(a_i)):
-    # z_j - c_j for a_i: c_i = -1 in max form, so z_j - c_j = 0 - (-1) = 1
-    # For everything else: c_j = 0, so z_j - c_j = 0
-    # Then we eliminate the basic artificials.
-
     for name, _ in artificial_cols:
-        col_idx = columns.index(name)
-        zrow_c_p1[col_idx] = 1.0  # will be eliminated
+        col_idx = col_idx_map[name]
+        zrow_c_p1[col_idx] = 1.0  # will be eliminated by basis rows
 
     # Eliminate basic artificials from z-row
     for name, _ in artificial_cols:
-        col_idx = columns.index(name)
+        col_idx = col_idx_map[name]
         if name in basis:
             row_idx = basis.index(name)
             factor = zrow_c_p1[col_idx]
@@ -116,24 +100,21 @@ def solve_twophase(c, A, b, senses, maximize=True):
                 for k in range(n_total + 1):
                     zrow_c_p1[k] -= factor * tab[row_idx][k]
 
-    # Clean near-zeros
     for k in range(n_total + 1):
         if abs(zrow_c_p1[k]) < 1e-12:
             zrow_c_p1[k] = 0.0
 
-    # Solve Phase 1
     tableau_p1 = Tableau(columns, basis, tab, zrow_c_p1, zrow_m_p1, phase="phase1")
     status_p1 = tableau_p1.solve()
+
+    if status_p1 == "iteration_limit":
+        raise RuntimeError("Simplex iteration limit reached in Phase 1.")
 
     steps = list(tableau_p1.steps)
 
     # Check Phase 1 result
-    # Phase 1 is "optimal" when z_j - c_j are all non-negative
-    # The objective value (z = zrow_c[-1]) should be 0 if feasible
-    # (since we're maximizing -sum(a), optimal = 0 means all artificials = 0)
     if status_p1 == "optimal":
         p1_obj = tableau_p1.zrow_c[-1]
-        # z = -sum(a_i) at optimum. If z < 0 (i.e., sum(a) > 0), infeasible.
         if p1_obj < -1e-8:
             return envelope("infeasible",
                             message="Phase 1 ended with a positive sum of artificials: "
@@ -144,39 +125,40 @@ def solve_twophase(c, A, b, senses, maximize=True):
                         message="Phase 1 is unbounded (should not happen).",
                         steps=steps)
 
-    # ================================================================ Phase 2
-    # Use the final basis and tableau from Phase 1, but rebuild the z-row for the original objective.
-    # Keep artificial columns (they may not re-enter the basis, but we need them for dual prices).
+    # Drive any artificial variables remaining in the basis at level 0 out of the basis
+    art_names = {name for name, _ in artificial_cols}
+    for i in range(tableau_p1.n_rows):
+        if tableau_p1.basis[i] in art_names:
+            # Look for a non-artificial candidate column to pivot on
+            for j in range(tableau_p1.n_cols):
+                col_name = tableau_p1.columns[j]
+                if col_name not in art_names and col_name not in tableau_p1.basis:
+                    if abs(tableau_p1.tab[i][j]) > 1e-10:
+                        tableau_p1.pivot(i, j)
+                        break
 
+    # ================================================================ Phase 2
     sign = 1.0 if maximize else -1.0
 
-    # Build the Phase 2 z-row from scratch using the original objective
     zrow_c_p2 = [0.0] * (n_total + 1)
     zrow_m_p2 = [0.0] * (n_total + 1)
 
-    # Initial z_j - c_j = -sign * c_j for decision variables
     for j in range(n_vars):
         zrow_c_p2[j] = -sign * float(c[j])
 
-    # Artificial variables must not re-enter: give them a large z_j - c_j?
-    # No — per the fixture, artificials are just kept as columns with z_j - c_j
-    # naturally computed. They won't re-enter because their reduced costs will be non-negative
-    # (the contract says keep them for reading dual prices).
-
-    # Eliminate basic variables from z-row
+    # Eliminate basic variables from Phase 2 z-row
     for i, bv in enumerate(tableau_p1.basis):
-        col_idx = tableau_p1.columns.index(bv)
+        col_idx = col_idx_map[bv]
         factor = zrow_c_p2[col_idx]
         if abs(factor) > 1e-15:
             for k in range(n_total + 1):
                 zrow_c_p2[k] -= factor * tableau_p1.tab[i][k]
 
-    # Clean near-zeros
     for k in range(n_total + 1):
         if abs(zrow_c_p2[k]) < 1e-12:
             zrow_c_p2[k] = 0.0
 
-    # Create Phase 2 tableau using the basis/tab state from end of Phase 1
+    # Artificial variables are frozen from re-entering during Phase 2
     tableau_p2 = Tableau(
         list(tableau_p1.columns),
         list(tableau_p1.basis),
@@ -184,11 +166,14 @@ def solve_twophase(c, A, b, senses, maximize=True):
         zrow_c_p2,
         zrow_m_p2,
         phase="phase2",
+        excluded_columns=art_names,
     )
-    # Continue iteration numbering from Phase 1
     tableau_p2._iteration = tableau_p1._iteration
 
     status_p2 = tableau_p2.solve()
+
+    if status_p2 == "iteration_limit":
+        raise RuntimeError("Simplex iteration limit reached in Phase 2.")
 
     steps.extend(tableau_p2.steps)
 
@@ -196,7 +181,6 @@ def solve_twophase(c, A, b, senses, maximize=True):
         return envelope("unbounded", message="The LP is unbounded.", steps=steps)
 
     if status_p2 == "optimal":
-        # Extract solution
         x = [0.0] * n_vars
         for i, bv in enumerate(tableau_p2.basis):
             if bv.startswith("x"):
@@ -205,7 +189,6 @@ def solve_twophase(c, A, b, senses, maximize=True):
                     x[idx] = _round_val(tableau_p2.tab[i][-1])
 
         z = _round_val(sign * tableau_p2.zrow_c[-1])
-
         return envelope("optimal", answer={"x": x, "z": z}, steps=steps)
 
     return envelope("infeasible", message="Solver did not converge.", steps=steps)

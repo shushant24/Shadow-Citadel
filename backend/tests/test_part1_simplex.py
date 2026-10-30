@@ -1,6 +1,7 @@
 import pytest
 from conftest import check_contract, check_envelope, crafting_lp
 from solvers.bigm import solve_bigm
+from solvers.simplex import Tableau
 from solvers.twophase import solve_twophase
 
 
@@ -50,25 +51,20 @@ def _craft_answer_stub(result):
 
 
 def test_blands_rule_prevents_cycling():
-    """A degenerate LP that requires careful pivot selection — verify the solver terminates correctly."""
-    # Degenerate LP with redundant constraints
-    # Maximize  z = 2x1 + x2
-    # subject to:
-    #   x1 + x2 <= 4
-    #   x1      <= 3
-    #        x2 <= 3
-    #   x1 + x2 <= 4   (redundant — creates degeneracy)
-    # Optimal: x1 = 3, x2 = 1, z = 7
-    c = [2, 1]
-    A = [[1, 1], [1, 0], [0, 1], [1, 1]]
-    b = [4, 3, 3, 4]
-    senses = ["<=", "<=", "<=", "<="]
+    """Beale's classic cycling example with maximize=False."""
+    c = [-0.75, 20, -0.5, 6]
+    A = [
+        [0.25, -8, -1, 9],
+        [0.5, -12, -0.5, 3],
+        [0, 0, 1, 0],
+    ]
+    b = [0, 0, 1]
+    senses = ["<=", "<=", "<="]
 
-    result = solve_bigm(c, A, b, senses, maximize=True)
+    result = solve_bigm(c, A, b, senses, maximize=False)
     assert result["status"] == "optimal"
-    assert result["answer"]["z"] == pytest.approx(7.0)
-    assert result["answer"]["x"][0] == pytest.approx(3.0)
-    assert result["answer"]["x"][1] == pytest.approx(1.0)
+    assert result["answer"]["z"] == pytest.approx(-1.25)
+    assert result["answer"]["x"] == pytest.approx([1, 0, 1, 0])
 
 
 def test_unbounded_detection():
@@ -80,3 +76,52 @@ def test_unbounded_detection():
 
     result = solve_bigm(c, A, b, senses, maximize=True)
     assert result["status"] == "unbounded"
+
+
+def test_twophase_artificials_cannot_reenter():
+    """Ensure artificial columns do not re-enter the basis during Phase 2."""
+    # Case 1: min x1 s.t. x1 = 5
+    res1 = solve_twophase([1], [[1]], [5], ["="], maximize=False)
+    assert res1["status"] == "optimal"
+    assert res1["answer"]["x"] == pytest.approx([5.0])
+    assert res1["answer"]["z"] == pytest.approx(5.0)
+
+    # Case 2: min 2x1+3x2 s.t. x1+x2>=4, x1+3x2>=6
+    res2 = solve_twophase([2, 3], [[1, 1], [1, 3]], [4, 6], [">=", ">="], maximize=False)
+    assert res2["status"] == "optimal"
+    assert res2["answer"]["x"] == pytest.approx([3.0, 1.0])
+    assert res2["answer"]["z"] == pytest.approx(9.0)
+
+    # Case 3: max -x1 s.t. x1 >= 5
+    res3 = solve_twophase([-1], [[1]], [5], [">="], maximize=True)
+    assert res3["status"] == "optimal"
+    assert res3["answer"]["x"] == pytest.approx([5.0])
+    assert res3["answer"]["z"] == pytest.approx(-5.0)
+
+
+def test_bigm_infeasible_not_mislabeled_as_unbounded():
+    """max x2 s.t. x1 >= 5, x1 <= 3 is infeasible even though x2 has an unbounded direction."""
+    c = [0, 1]
+    A = [[1, 0], [1, 0]]
+    b = [5, 3]
+    senses = [">=", "<="]
+
+    res = solve_bigm(c, A, b, senses, maximize=True)
+    assert res["status"] == "infeasible"
+
+
+def test_input_validation():
+    """Invalid dimensions or senses must raise ValueError."""
+    with pytest.raises(ValueError, match="Invalid sense"):
+        solve_bigm([1], [[1]], [5], ["=="])
+    with pytest.raises(ValueError, match="Length mismatch"):
+        solve_bigm([1], [[1], [2]], [5], ["<="])
+    with pytest.raises(ValueError, match="expected 1"):
+        solve_twophase([1], [[1, 2]], [5], ["<="])
+
+
+def test_iteration_limit():
+    """Tableau.solve returns 'iteration_limit' when max_iters is exhausted."""
+    tab = Tableau(["x1"], ["x1"], [[1.0, 1.0]], [-1.0, 0.0], [0.0, 0.0])
+    status = tab.solve(max_iters=0)
+    assert status == "iteration_limit"
