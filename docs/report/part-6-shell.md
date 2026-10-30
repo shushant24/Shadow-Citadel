@@ -55,12 +55,12 @@ Part 6 establishes the common shell and cross-tab abstractions for the Shadow Ci
 ## 4. Testing & Verification
 
 Comprehensive Vitest + React Testing Library test suites:
-- `src/__tests__/ScenarioPanel.test.jsx`: 6 unit tests covering field rendering, numeric updates, recipe matrix updates, reset button, and raw JSON inspection.
-- `src/__tests__/StepPlayer.test.jsx`: 7 unit tests covering forward/backward navigation, first/last boundary jumps, scrubber range interaction, timer auto-play and auto-pausing at the end, metadata notes, single-step disabling, and prop reset.
+- `src/__tests__/ScenarioPanel.test.jsx`: 8 unit tests covering field rendering, null scenario, numeric updates with blur-to-commit, draft-string validation rejection, recipe matrix updates, reset button, limit editing, and raw JSON inspection.
+- `src/__tests__/StepPlayer.test.jsx`: 13 unit tests covering forward/backward navigation, first/last boundary jumps, scrubber range interaction, timer auto-play and auto-pausing at the end, restart from end, shrinking steps, keyboard navigation (ArrowLeft/Right, Home, End, Space), modifier key suppression (Alt, Ctrl, Meta), input-key isolation, no-steps re-render stability, speed input, metadata banners, empty and single-step states.
 - `src/__tests__/Status.test.jsx`: 3 unit tests verifying error alerts, optimal silent rendering, and infeasible status preserving children.
 - `src/__tests__/App.test.jsx`: 3 unit tests verifying all 4 tabs rendering, tab switching, fixtures mode badge, and scenario editing and resetting.
 - `src/__tests__/api.test.js`: 6 contract and fixture tests verifying immutability, Big-M vs Two-Phase, 40-minute infeasibility, 42-minute plan, and matrix/points requests.
 
 **Test Results:**
-- 5 Test Files, 25 tests passing (100% pass rate).
+- 5 Test Files, 33 tests passing (100% pass rate).
 - Production build verified: `vite build` generated output bundle cleanly in <500ms.

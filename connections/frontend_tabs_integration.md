@@ -112,7 +112,7 @@ export default function MapTab({ scenario }) {
 
 ### 2.2 Copy-Paste Implementation Template for Part 8
 ```jsx
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { api, FIXTURE_EXTRAS } from "../api.js";
 import { useApi } from "../useApi.js";
 import Status from "../components/Status.jsx";
@@ -121,10 +121,12 @@ import StepPlayer from "../components/StepPlayer.jsx";
 export default function MatchupsTab({ scenario }) {
   const [unbalanced, setUnbalanced] = useState(false);
 
-  // Toggle between 5x5 matrix and 5x4 unbalanced matrix
-  const scores = unbalanced
-    ? (scenario?.weapon_boss_scores || []).map((r) => r.slice(0, 4))
-    : scenario?.weapon_boss_scores || [];
+  // useMemo prevents rebuilding scores on every render, which would cause
+  // useApi to re-fetch in an infinite loop (new array identity → effect re-fires).
+  const scores = useMemo(() => {
+    const raw = scenario?.weapon_boss_scores || [];
+    return unbalanced ? raw.map((r) => r.slice(0, 4)) : raw;
+  }, [scenario?.weapon_boss_scores, unbalanced]);
 
   const { loading, error, data } = useApi(
     () => api.assign(scores, true),
@@ -226,12 +228,16 @@ import { useApi } from "../useApi.js";
 import Status from "../components/Status.jsx";
 import StepPlayer from "../components/StepPlayer.jsx";
 
+// Fixture-based optimal tour cost. Parts 7/10 will replace this with the live
+// value from api.route (answer.cost) or api.pipeline (tour_time) once integrated.
+const FIXTURE_OPTIMAL_TOUR_MIN = 70;
+
 export default function LoadoutTab({ scenario }) {
   const [method, setMethod] = useState("bigm");
   const [customOverride, setCustomOverride] = useState(null);
 
-  // Derive craft time directly from scenario.total_time minus the 70-min optimal tour
-  const derivedCraftTime = Math.max(0, (scenario?.total_time ?? 120) - 70);
+  // Derive craft time directly from scenario.total_time minus the fixture optimal tour
+  const derivedCraftTime = Math.max(0, (scenario?.total_time ?? 120) - FIXTURE_OPTIMAL_TOUR_MIN);
   const activeCraftTime = customOverride ?? derivedCraftTime;
 
   // Reset custom slider override whenever scenario.total_time changes
@@ -298,18 +304,18 @@ export default function LoadoutTab({ scenario }) {
         <input
           id="time-slider"
           type="range"
-          min="38"
-          max="60"
+          min={0}
+          max={Math.max(derivedCraftTime + 10, 60)}
           value={activeCraftTime}
           onChange={(e) => setCustomOverride(Number(e.target.value))}
           className="step-scrubber"
           style={{ marginTop: "8px" }}
         />
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--muted)" }}>
-          <span>38 min (Infeasible)</span>
-          <span>40 min (Naive Tour Remainder)</span>
+          <span>0 min</span>
           <span>42 min (Min Feasible, Z=111)</span>
-          <span>50 min (Optimal Tour, Z=117)</span>
+          <span>{derivedCraftTime} min (From Scenario)</span>
+          <span>{Math.max(derivedCraftTime + 10, 60)} min</span>
         </div>
       </div>
 
@@ -439,28 +445,28 @@ export default function SummaryTab({ scenario }) {
         <div className="limits-grid" style={{ marginBottom: "20px" }}>
           <div className="panel" style={{ background: "var(--card-bg)", borderLeft: "4px solid var(--ok)" }}>
             <h3>Optimized Pipeline</h3>
-            <p>Tour Time: <strong>{opt?.tour_time ?? 70} min</strong> (Hungarian + B&B)</p>
-            <p>Combat Score: <strong>{opt?.combat ?? 445}</strong></p>
-            <p>Crafting Score: <strong>{opt?.crafting ?? 117}</strong> ({opt?.craft_time ?? 50} min remaining)</p>
+            <p>Tour Time: <strong>{opt?.tour_time ?? "—"} min</strong> (Hungarian + B&B)</p>
+            <p>Combat Score: <strong>{opt?.combat ?? "—"}</strong></p>
+            <p>Crafting Score: <strong>{opt?.crafting != null ? opt.crafting : "—"}</strong> ({opt?.craft_time ?? "—"} min remaining)</p>
             <hr style={{ borderColor: "var(--panel-border)" }} />
             <h2 style={{ color: "var(--ok)", margin: 0 }}>
-              Total Score: {opt?.total ?? 562}
+              Total Score: {opt?.total ?? "—"}
             </h2>
           </div>
 
           <div className="panel" style={{ background: "var(--card-bg)", borderLeft: "4px solid var(--danger)" }}>
             <h3>Naive Pipeline</h3>
-            <p>Tour Time: <strong>{naive?.tour_time ?? 80} min</strong> (Nearest Neighbour, 12.5% slower)</p>
-            <p>Combat Score: <strong>{naive?.combat ?? 445}</strong></p>
+            <p>Tour Time: <strong>{naive?.tour_time ?? "—"} min</strong> (Nearest Neighbour{opt?.tour_time && naive?.tour_time ? `, ${(((naive.tour_time - opt.tour_time) / opt.tour_time) * 100).toFixed(1)}% slower` : ""})</p>
+            <p>Combat Score: <strong>{naive?.combat ?? "—"}</strong></p>
             <p>
               Crafting Score:{" "}
               <strong style={{ color: "var(--danger)" }}>
-                {naive?.crafting ?? `Infeasible (${naive?.craft_time ?? 40} min left)`}
+                {naive?.crafting != null ? naive.crafting : `Infeasible (${naive?.craft_time ?? "—"} min left)`}
               </strong>
             </p>
             <hr style={{ borderColor: "var(--panel-border)" }} />
             <h2 style={{ color: "var(--danger)", margin: 0 }}>
-              Total: Infeasible
+              Total: {naive?.total != null ? naive.total : "Infeasible"}
             </h2>
           </div>
         </div>
@@ -501,8 +507,8 @@ export default function SummaryTab({ scenario }) {
           <div className="panel" style={{ background: "var(--bg-dark)", marginTop: "16px" }}>
             <h4>20 Seeded Random Maps Summary</h4>
             <p>
-              Average TSP Gain: <strong>{exp.random_maps.avg_route_gain_pct ?? 12.5}%</strong> |{" "}
-              Average Combat Gain: <strong>{exp.random_maps.avg_assign_gain_pct ?? 7.5}%</strong>
+              Average TSP Gain: <strong>{exp.random_maps.avg_route_gain_pct ?? "—"}%</strong> |{" "}
+              Average Combat Gain: <strong>{exp.random_maps.avg_assign_gain_pct ?? "—"}%</strong>
             </p>
           </div>
         )}

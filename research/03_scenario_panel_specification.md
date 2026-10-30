@@ -65,7 +65,7 @@ The panel is structured into clean, styled sections inside an expandable contain
 
 ```
 +-------------------------------------------------------------------------------+
-|  ▶ Scenario Configuration (8 nodes, 4 loot drops) [Edited] [Reset Defaults]   |
+|  ▶ Scenario (8 nodes, 4 loot drops) [Modified] [Reset to Defaults]            |
 +-------------------------------------------------------------------------------+
 |  [ Section 1: Raid Overview ]                                                 |
 |  Raid Time Limit: [ 120 ] min                                                 |

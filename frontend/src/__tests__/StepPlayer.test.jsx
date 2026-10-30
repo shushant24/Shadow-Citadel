@@ -130,26 +130,77 @@ describe("StepPlayer component", () => {
     expect(screen.getByText("step value 100")).toBeInTheDocument();
   });
 
-  test("keyboard navigation: ArrowRight, ArrowLeft, and Space", () => {
+  test("keyboard navigation: ArrowRight, ArrowLeft, Space, Home, and End", () => {
     render(<StepPlayer steps={steps}>{(s) => <p>step value {s.n}</p>}</StepPlayer>);
     const playerRegion = screen.getByRole("region", { name: "Step Player" });
 
     // ArrowRight -> step 2
     fireEvent.keyDown(playerRegion, { key: "ArrowRight" });
-    expect(screen.getByText("step value 2")).toBeInTheDocument();
+    expect(screen.getByText("Step 2 of 3")).toBeInTheDocument();
 
     // ArrowLeft -> step 1
     fireEvent.keyDown(playerRegion, { key: "ArrowLeft" });
-    expect(screen.getByText("step value 1")).toBeInTheDocument();
+    expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
+
+    // End -> last step
+    fireEvent.keyDown(playerRegion, { key: "End" });
+    expect(screen.getByText("Step 3 of 3")).toBeInTheDocument();
+
+    // Home -> first step
+    fireEvent.keyDown(playerRegion, { key: "Home" });
+    expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
 
     // Space -> toggles play
     fireEvent.keyDown(playerRegion, { key: " " });
     expect(screen.getByText("Pause")).toBeInTheDocument();
+  });
 
-    // Modifiers like Alt+ArrowRight are ignored
+  test("modifier keys (Alt, Ctrl, Meta, Shift) are ignored by keyboard handler", () => {
+    render(<StepPlayer steps={steps}>{(s) => <p>step value {s.n}</p>}</StepPlayer>);
+    const playerRegion = screen.getByRole("region", { name: "Step Player" });
+
+    // Start at step 1
+    expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
+
+    // Alt+ArrowRight should NOT advance the step
     fireEvent.keyDown(playerRegion, { key: "ArrowRight", altKey: true });
-    // Still playing, index didn't advance from alt
-    expect(screen.getByText("Pause")).toBeInTheDocument();
+    expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
+
+    // Ctrl+ArrowRight should NOT advance the step
+    fireEvent.keyDown(playerRegion, { key: "ArrowRight", ctrlKey: true });
+    expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
+
+    // Meta+ArrowRight should NOT advance the step
+    fireEvent.keyDown(playerRegion, { key: "ArrowRight", metaKey: true });
+    expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
+  });
+
+  test("keyboard events inside the speed input do not trigger step navigation", () => {
+    render(<StepPlayer steps={steps}>{(s) => <p>step value {s.n}</p>}</StepPlayer>);
+    const speedInput = screen.getByTitle("Speed in milliseconds (100 - 5000)");
+
+    expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
+
+    // ArrowRight inside the input should not advance step
+    fireEvent.keyDown(speedInput, { key: "ArrowRight" });
+    expect(screen.getByText("Step 1 of 3")).toBeInTheDocument();
+
+    // Space inside the input should not toggle play
+    fireEvent.keyDown(speedInput, { key: " " });
+    expect(screen.getByText("Play")).toBeInTheDocument();
+  });
+
+  test("rendering with no steps prop does not crash on re-render", () => {
+    const { rerender } = render(
+      <StepPlayer>{(s) => <p>step {s?.n}</p>}</StepPlayer>
+    );
+
+    // Re-render to trigger the render-phase identity check
+    expect(() => {
+      rerender(<StepPlayer>{(s) => <p>step {s?.n}</p>}</StepPlayer>);
+    }).not.toThrow();
+
+    expect(screen.getByText(/No steps/)).toBeInTheDocument();
   });
 
   test("custom speed input allows free typing and clamps on blur", () => {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 const RECIPE_ITEMS = [
   { id: "x1", name: "x1 Health potion" },
@@ -19,23 +19,44 @@ const RECIPE_ATTRS = [
  * Scenario editor panel (Part 6).
  * Allows live editing of raid time limit, crafting limits, and item recipes.
  * Propagates updates via onChange(nextScenario).
+ *
+ * Uses a draft-string approach for total_time so users can freely backspace,
+ * clear, and retype values without the input snapping back on every keystroke.
+ * Values are committed on blur or Enter.
  */
 export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = false }) {
   const [showRaw, setShowRaw] = useState(false);
+  // Draft string for total_time — allows free typing; commits on blur/Enter
+  const [timeDraft, setTimeDraft] = useState(String(scenario?.total_time ?? ""));
+
+  // Keep draft in sync when scenario.total_time changes externally (e.g. reset)
+  useEffect(() => {
+    setTimeDraft(String(scenario?.total_time ?? ""));
+  }, [scenario?.total_time]);
 
   if (!scenario) return null;
 
-  const handleTotalTimeChange = (e) => {
-    const raw = e.target.value.trim();
-    if (raw === "") return;
+  const commitTotalTime = useCallback(() => {
+    const raw = timeDraft.trim();
+    if (raw === "") {
+      // Revert to current value
+      setTimeDraft(String(scenario?.total_time ?? ""));
+      return;
+    }
     const num = Number(raw);
-    if (!Number.isFinite(num) || num < 1) return;
+    if (!Number.isFinite(num) || num < 1) {
+      setTimeDraft(String(scenario?.total_time ?? ""));
+      return;
+    }
     const val = Math.floor(num);
-    onChange?.({
-      ...scenario,
-      total_time: val,
-    });
-  };
+    if (val !== scenario?.total_time) {
+      onChange?.({
+        ...scenario,
+        total_time: val,
+      });
+    }
+    setTimeDraft(String(val));
+  }, [timeDraft, scenario, onChange]);
 
   const handleLimitChange = (key, rawValue, min = 0, isInt = false) => {
     const raw = String(rawValue).trim();
@@ -109,8 +130,12 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
               type="number"
               min="1"
               step="1"
-              value={scenario.total_time ?? ""}
-              onChange={handleTotalTimeChange}
+              value={timeDraft}
+              onChange={(e) => setTimeDraft(e.target.value)}
+              onBlur={commitTotalTime}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitTotalTime();
+              }}
               className="form-input num-input"
             />
           </div>

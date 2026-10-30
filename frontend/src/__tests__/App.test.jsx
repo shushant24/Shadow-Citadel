@@ -24,9 +24,10 @@ test("editing scenario updates state and shows modified badge, reset clears it",
   // Initially not modified
   expect(screen.queryByText("Modified")).toBeNull();
 
-  // Edit time limit inside act to await reactive re-fetching in tabs
+  // Edit time limit: type new value then blur to commit (draft-string approach)
   await act(async () => {
     fireEvent.change(timeInput, { target: { value: "105" } });
+    fireEvent.blur(timeInput);
   });
 
   expect(await screen.findByText("Modified")).toBeInTheDocument();

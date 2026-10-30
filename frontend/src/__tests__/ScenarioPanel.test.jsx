@@ -26,13 +26,19 @@ describe("ScenarioPanel component", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  test("editing raid time limit calls onChange and preserves nodes, loot, and weapon scores", () => {
+  test("editing raid time limit calls onChange on blur and preserves nodes, loot, and weapon scores", () => {
     const handleChange = vi.fn();
     const clonedFixture = structuredClone(scenarioFixture);
     render(<ScenarioPanel scenario={clonedFixture} onChange={handleChange} />);
 
     const timeInput = screen.getByLabelText(/Raid Time Limit/i);
+
+    // Type freely (draft updates, onChange not called yet)
     fireEvent.change(timeInput, { target: { value: "110" } });
+    expect(handleChange).not.toHaveBeenCalled();
+
+    // Blur commits the value
+    fireEvent.blur(timeInput);
 
     expect(handleChange).toHaveBeenCalledTimes(1);
     const updated = handleChange.mock.calls[0][0];
@@ -45,26 +51,30 @@ describe("ScenarioPanel component", () => {
     expect(clonedFixture.total_time).toBe(120);
   });
 
-  test("rejects invalid, negative, or empty input without calling onChange", () => {
+  test("rejects invalid, negative, or empty input on blur without calling onChange", () => {
     const handleChange = vi.fn();
     render(<ScenarioPanel scenario={scenarioFixture} onChange={handleChange} />);
 
     const timeInput = screen.getByLabelText(/Raid Time Limit/i);
 
-    // Empty input
+    // Empty input typed, then blur → reverts to 120, no onChange
     fireEvent.change(timeInput, { target: { value: "" } });
+    fireEvent.blur(timeInput);
     expect(handleChange).not.toHaveBeenCalled();
 
-    // Negative input
+    // Negative input typed, then blur → reverts, no onChange
     fireEvent.change(timeInput, { target: { value: "-10" } });
+    fireEvent.blur(timeInput);
     expect(handleChange).not.toHaveBeenCalled();
 
     // Zero input for total_time (min is 1)
     fireEvent.change(timeInput, { target: { value: "0" } });
+    fireEvent.blur(timeInput);
     expect(handleChange).not.toHaveBeenCalled();
 
     // Non-numeric string
     fireEvent.change(timeInput, { target: { value: "abc" } });
+    fireEvent.blur(timeInput);
     expect(handleChange).not.toHaveBeenCalled();
   });
 

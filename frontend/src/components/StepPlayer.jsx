@@ -1,5 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 
+// Stable empty array to avoid infinite re-render loops when steps prop is omitted.
+// A default `steps = []` in the destructuring creates a new array identity on every
+// render, which the render-phase identity check sees as a change, causing setState loops.
+const EMPTY_STEPS = [];
+
 const SPEED_PRESETS = [
   { label: "Fast", ms: 300 },
   { label: "Normal", ms: 800 },
@@ -16,7 +21,7 @@ const SPEED_PRESETS = [
  *   </StepPlayer>
  */
 export default function StepPlayer({
-  steps = [],
+  steps = EMPTY_STEPS,
   children,
   initialSpeedMs = 800,
   showScrubber = true,
