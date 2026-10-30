@@ -1,12 +1,251 @@
 """Part 1: Simplex tableau engine (pivot rules, Bland's rule fallback, infeasible/unbounded detection, per-iteration steps)."""
 
+from __future__ import annotations
+
 
 class Tableau:
-    """Tableau with pivoting. Every pivot appends one item to `steps` in the craft step format (docs/api-contract.md, validated by contract.py)."""
+    """Tableau with pivoting. Every pivot appends one item to `steps` in the craft step format
+    (docs/api-contract.md, validated by contract.py).
 
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError("Part 1")
+    Internal layout
+    ---------------
+    self.tab[i]  = constraint-row coefficients + RHS  (length = n_cols + 1)
+    self.zrow_c  = z_j - c_j row (real part)          (length = n_cols + 1)
+    self.zrow_m  = z_j - c_j row (Big-M part)         (length = n_cols + 1)
+    self.columns = variable names (length = n_cols)
+    self.basis   = current basic variable names per row
+    """
+
+    def __init__(self, columns: list[str], basis: list[str],
+                 tab: list[list[float]], zrow_c: list[float], zrow_m: list[float],
+                 phase: str = "bigm"):
+        self.columns = list(columns)
+        self.basis = list(basis)
+        self.tab = [list(row) for row in tab]
+        self.zrow_c = list(zrow_c)
+        self.zrow_m = list(zrow_m)
+        self.phase = phase
+        self.steps: list[dict] = []
+        self._iteration = 0
+
+    # ------------------------------------------------------------------ helpers
+    @property
+    def n_rows(self) -> int:
+        return len(self.tab)
+
+    @property
+    def n_cols(self) -> int:
+        return len(self.columns)
+
+    def _col_index(self, name: str) -> int:
+        return self.columns.index(name)
+
+    def _snapshot(self, entering: str | None, leaving: str | None,
+                  pivot: list[int] | None) -> dict:
+        """Create a step dict matching the craft step contract."""
+        z_val = self.zrow_c[-1]   # RHS of z-row (real part)
+        z_m_val = self.zrow_m[-1]  # RHS of z-row (M part)
+        return {
+            "iteration": self._iteration,
+            "phase": self.phase,
+            "columns": list(self.columns),
+            "basis": list(self.basis),
+            "tableau": [list(row) for row in self.tab],
+            "zrow": {
+                "c": list(self.zrow_c),
+                "m": list(self.zrow_m),
+            },
+            "entering": entering,
+            "leaving": leaving,
+            "pivot": list(pivot) if pivot is not None else None,
+            "z": z_val,
+            "z_m": z_m_val,
+        }
+
+    # ------------------------------------------------------------------ pivot selection
+    def _entering_column(self, blands: bool = False) -> int | None:
+        """Find entering variable (most negative z_j - c_j, lexicographic on (m, c)).
+        With Bland's rule, pick the smallest-index column with a negative indicator."""
+        best_col = None
+        best_m = 0.0
+        best_c = 0.0
+        eps = -1e-10
+
+        for j in range(self.n_cols):
+            m_val = self.zrow_m[j]
+            c_val = self.zrow_c[j]
+            # A column is a candidate if its (m, c) indicator is negative
+            # (lexicographic: m first, then c)
+            is_negative = (m_val < eps) or (abs(m_val) < 1e-10 and c_val < eps)
+            if not is_negative:
+                continue
+
+            if blands:
+                # Bland's rule: smallest index
+                if best_col is None:
+                    best_col = j
+                    best_m = m_val
+                    best_c = c_val
+                # Already found a smaller index, keep it
+            else:
+                # Most negative (lexicographic)
+                if best_col is None:
+                    best_col = j
+                    best_m = m_val
+                    best_c = c_val
+                else:
+                    # Compare (m_val, c_val) < (best_m, best_c) lexicographically
+                    if (m_val < best_m - 1e-10) or \
+                       (abs(m_val - best_m) < 1e-10 and c_val < best_c - 1e-10):
+                        best_col = j
+                        best_m = m_val
+                        best_c = c_val
+
+        return best_col
+
+    def _leaving_row(self, col: int, blands: bool = False) -> int | None:
+        """Minimum ratio test. Returns None if unbounded.
+        With Bland's rule, break ties by smallest basis index."""
+        best_row = None
+        best_ratio = float("inf")
+        best_bland_idx = float("inf")  # column index of the leaving variable for Bland tie-break
+
+        for i in range(self.n_rows):
+            a_ij = self.tab[i][col]
+            if a_ij <= 1e-10:
+                continue
+            ratio = self.tab[i][-1] / a_ij
+            if ratio < best_ratio - 1e-10:
+                best_ratio = ratio
+                best_row = i
+                best_bland_idx = self._col_index(self.basis[i]) if blands else 0
+            elif blands and abs(ratio - best_ratio) < 1e-10:
+                # Bland tie-break: smallest basis variable index
+                idx = self._col_index(self.basis[i])
+                if idx < best_bland_idx:
+                    best_row = i
+                    best_bland_idx = idx
+
+        return best_row
+
+    # ------------------------------------------------------------------ pivot operation
+    def pivot(self, row: int, col: int) -> None:
+        """Perform a single pivot: make tab[row][col] the identity column."""
+        piv = self.tab[row][col]
+        if abs(piv) < 1e-15:
+            raise ValueError("Pivot element is zero")
+
+        # Scale pivot row
+        width = self.n_cols + 1  # columns + RHS
+        self.tab[row] = [self.tab[row][k] / piv for k in range(width)]
+
+        # Eliminate from other rows
+        for i in range(self.n_rows):
+            if i == row:
+                continue
+            factor = self.tab[i][col]
+            if abs(factor) < 1e-15:
+                continue
+            self.tab[i] = [self.tab[i][k] - factor * self.tab[row][k] for k in range(width)]
+
+        # Eliminate from z-rows
+        for zrow in (self.zrow_c, self.zrow_m):
+            factor = zrow[col]
+            if abs(factor) < 1e-15:
+                continue
+            for k in range(width):
+                zrow[k] -= factor * self.tab[row][k]
+
+        # Update basis
+        self.basis[row] = self.columns[col]
+
+        # Clean near-zero values
+        self._clean()
+
+    def _clean(self, eps: float = 1e-12) -> None:
+        """Round near-zero values to 0 to avoid floating point artifacts."""
+        width = self.n_cols + 1
+        for i in range(self.n_rows):
+            for k in range(width):
+                if abs(self.tab[i][k]) < eps:
+                    self.tab[i][k] = 0.0
+        for zrow in (self.zrow_c, self.zrow_m):
+            for k in range(width):
+                if abs(zrow[k]) < eps:
+                    zrow[k] = 0.0
+
+    # ------------------------------------------------------------------ solve
+    def solve(self, max_iters: int = 1000, blands: bool = False) -> str:
+        """Run the simplex method on this tableau.
+
+        Returns "optimal", "infeasible", or "unbounded".
+        Populates self.steps with one snapshot per iteration (iter 0 = initial).
+        If the standard rule cycles (same basis twice), automatically switches to Bland's.
+        """
+        seen_bases: set[tuple[str, ...]] | None = None if blands else set()
+
+        for _ in range(max_iters):
+            col = self._entering_column(blands=blands)
+
+            if col is None:
+                # Record the final (optimal) snapshot
+                self.steps.append(self._snapshot(None, None, None))
+                self._iteration += 1
+                return "optimal"
+
+            row = self._leaving_row(col, blands=blands)
+            entering = self.columns[col]
+
+            if row is None:
+                # Unbounded: record snapshot with entering but no leaving
+                self.steps.append(self._snapshot(entering, None, None))
+                self._iteration += 1
+                return "unbounded"
+
+            leaving = self.basis[row]
+
+            # Record the pre-pivot snapshot (shows which pivot will happen)
+            self.steps.append(self._snapshot(entering, leaving, [row, col]))
+            self._iteration += 1
+
+            # Cycle detection (before Bland's)
+            if seen_bases is not None:
+                key = tuple(sorted(self.basis))
+                if key in seen_bases:
+                    # Detected cycling, restart with Bland's rule
+                    self.steps.clear()
+                    self._iteration = 0
+                    return self._solve_blands(max_iters)
+                seen_bases.add(key)
+
+            self.pivot(row, col)
+
+        # Should not reach here
+        return "optimal"
+
+    def _solve_blands(self, max_iters: int = 1000) -> str:
+        """Restart solve with Bland's rule (called when cycling is detected)."""
+        return self.solve(max_iters=max_iters, blands=True)
+
+    # ------------------------------------------------------------------ reading results
+    def get_solution(self) -> list[float]:
+        """Return the values of all decision variables (x1, x2, ...) in column order."""
+        values = []
+        for j, name in enumerate(self.columns):
+            if name in self.basis:
+                row_idx = self.basis.index(name)
+                values.append(self.tab[row_idx][-1])
+            else:
+                values.append(0.0)
+        return values
+
+    def get_objective(self) -> float:
+        """Return the current objective value (real part)."""
+        return self.zrow_c[-1]
 
 
-def solve(*args, **kwargs):
-    raise NotImplementedError("Part 1")
+def solve(c, A, b, senses, maximize=True):
+    """Convenience wrapper — delegates to bigm or twophase depending on the problem.
+    For direct use, prefer solve_bigm or solve_twophase from their modules."""
+    from solvers.bigm import solve_bigm
+    return solve_bigm(c, A, b, senses, maximize=maximize)
