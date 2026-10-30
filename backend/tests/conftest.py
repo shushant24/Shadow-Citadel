@@ -16,6 +16,9 @@ pending = pytest.mark.xfail(raises=NotImplementedError, strict=True,
                             reason="solver not implemented yet; remove this marker when it lands")
 
 
+CONSTRAINT_NAMES = ["time", "weight", "stamina", "survival", "slots"]  # row order of the crafting LP
+
+
 def load_json(path: Path):
     return json.loads(path.read_text())
 
@@ -53,3 +56,12 @@ def check_envelope(result):
     assert result["status"] in {"optimal", "infeasible", "unbounded"}
     assert isinstance(result["answer"], dict)
     assert isinstance(result["steps"], list)
+
+
+def check_contract(kind, result):
+    """Full contract check (answer fields, every step, cross-field consistency): backend/contract.py."""
+    import contract
+    try:
+        contract.check(kind, result)
+    except contract.ContractError as err:
+        pytest.fail(f"contract violation for {kind}: {err}")

@@ -1,6 +1,6 @@
 import itertools
 
-from conftest import check_envelope, pending
+from conftest import check_contract, check_envelope, pending
 from solvers.hungarian import solve_assignment
 
 
@@ -33,3 +33,36 @@ def test_steps_end_with_final_phase(scenario):
     steps = solve_assignment(scenario["weapon_boss_scores"], maximize=True)["steps"]
     assert steps[0]["phase"] == "convert"
     assert steps[-1]["phase"] == "final"
+
+
+@pending
+def test_steps_follow_the_assign_contract(scenario, fixture):
+    result = solve_assignment(scenario["weapon_boss_scores"], maximize=True)
+    check_contract("assign", result)
+    assert result["steps"][0]["matrix"] == fixture("assign")["steps"][0]["matrix"]  # c_ij = 97 - p_ij
+
+
+@pending
+def test_unbalanced_pads_a_dummy_column_and_reports_unassigned(scenario, fixture):
+    scores = [row[:4] for row in scenario["weapon_boss_scores"]]
+    result = solve_assignment(scores, maximize=True)
+    check_contract("assign", result)
+    assert result["answer"]["total"] == fixture("assign_unbalanced")["answer"]["total"] == 385
+    assert result["steps"][0]["dummy_cols"] == [5]
+    assert len(result["answer"]["unassigned"]["rows"]) == 1
+
+
+@pending
+def test_adjust_step_appears_when_zeros_need_more_lines(fixture):
+    case = fixture("assign_adjust")
+    result = solve_assignment(case["input"]["scores"], maximize=True)
+    phases = [s["phase"] for s in result["steps"]]
+    assert "adjust" in phases and phases[-1] == "final"
+    assert result["answer"]["total"] == case["answer"]["total"] == 116
+
+
+@pending
+def test_minimization_mode_gives_the_cheapest_assignment():
+    cost = [[4, 1, 3], [2, 0, 5], [3, 2, 2]]
+    result = solve_assignment(cost, maximize=False)
+    assert result["answer"]["total"] == 5

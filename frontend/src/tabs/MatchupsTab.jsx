@@ -9,7 +9,7 @@ export default function MatchupsTab({ scenario }) {
     <section className="panel" aria-label="Matchups">
       <h2>Matchups</h2>
       <p className="todo">TODO Part 8: build this tab. Currently renders the raw fixture / API envelope.</p>
-      <Status loading={loading} error={error}>
+      <Status loading={loading} error={error} result={data}>
         <p>Status: <strong>{data?.status}</strong></p>
         <pre>{JSON.stringify(data?.answer, null, 2)}</pre>
       </Status>

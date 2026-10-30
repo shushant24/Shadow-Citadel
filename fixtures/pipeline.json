@@ -5,7 +5,19 @@
     "craft_time": 50,
     "combat": 445,
     "crafting": 117,
-    "total": 562
+    "total": 562,
+    "route_policy": "optimal",
+    "tour": [
+      "Base",
+      "C2",
+      "C1",
+      "C6",
+      "C3",
+      "C4",
+      "C5",
+      "C7",
+      "Base"
+    ]
   },
   "steps": []
 }

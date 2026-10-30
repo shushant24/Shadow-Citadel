@@ -46,27 +46,21 @@
   "steps": [
     {
       "node": 1,
+      "parent": null,
       "forbidden_arcs": [],
+      "branched_arc": null,
       "assignment": [
         [
           "Base",
           "C7"
         ],
         [
-          "C7",
-          "C5"
-        ],
-        [
-          "C5",
-          "Base"
-        ],
-        [
           "C1",
           "C6"
         ],
         [
-          "C6",
-          "C3"
+          "C2",
+          "C1"
         ],
         [
           "C3",
@@ -77,8 +71,16 @@
           "C2"
         ],
         [
-          "C2",
-          "C1"
+          "C5",
+          "Base"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "C5"
         ]
       ],
       "cost": 64,
@@ -96,14 +98,100 @@
           "C2"
         ]
       ],
-      "status": "branch"
+      "incumbent": null,
+      "status": "branch",
+      "note": "branch on arcs of the smallest subtour: Base->C7, C7->C5, C5->Base"
     },
     {
       "node": 2,
-      "forbidden_arcs": [],
+      "parent": 1,
+      "forbidden_arcs": [
+        [
+          "Base",
+          "C7"
+        ]
+      ],
+      "branched_arc": [
+        "Base",
+        "C7"
+      ],
       "assignment": [
         [
           "Base",
+          "C5"
+        ],
+        [
+          "C1",
+          "C6"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C4"
+        ],
+        [
+          "C4",
+          "C2"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 64,
+      "subtours": [
+        [
+          "Base",
+          "C5",
+          "C7"
+        ],
+        [
+          "C1",
+          "C6",
+          "C3",
+          "C4",
+          "C2"
+        ]
+      ],
+      "incumbent": null,
+      "status": "branch",
+      "note": "branch on arcs of the smallest subtour: Base->C5, C5->C7, C7->Base"
+    },
+    {
+      "node": 3,
+      "parent": 2,
+      "forbidden_arcs": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "Base",
+          "C5"
+        ]
+      ],
+      "branched_arc": [
+        "Base",
+        "C5"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C4"
+        ],
+        [
+          "C1",
           "C2"
         ],
         [
@@ -111,12 +199,80 @@
           "C1"
         ],
         [
-          "C1",
+          "C3",
           "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "C7"
         ],
         [
           "C6",
           "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C4",
+          "C5",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": null,
+      "status": "branch",
+      "note": "branch on arcs of the smallest subtour: C1->C2, C2->C1"
+    },
+    {
+      "node": 4,
+      "parent": 3,
+      "forbidden_arcs": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "C1",
+          "C2"
+        ]
+      ],
+      "branched_arc": [
+        "C1",
+        "C2"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C2"
+        ],
+        [
+          "C1",
+          "C6"
+        ],
+        [
+          "C2",
+          "C1"
         ],
         [
           "C3",
@@ -131,14 +287,1415 @@
           "C7"
         ],
         [
+          "C6",
+          "C3"
+        ],
+        [
           "C7",
           "Base"
         ]
       ],
       "cost": 70,
       "subtours": [],
-      "status": "feasible"
+      "incumbent": 70,
+      "status": "feasible",
+      "note": "full tour found, incumbent = 70"
+    },
+    {
+      "node": 5,
+      "parent": 3,
+      "forbidden_arcs": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "C2",
+          "C1"
+        ]
+      ],
+      "branched_arc": [
+        "C2",
+        "C1"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C2"
+        ],
+        [
+          "C1",
+          "C6"
+        ],
+        [
+          "C2",
+          "C4"
+        ],
+        [
+          "C3",
+          "C5"
+        ],
+        [
+          "C4",
+          "C3"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "C6",
+          "C1"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 72,
+      "subtours": [
+        [
+          "Base",
+          "C2",
+          "C4",
+          "C3",
+          "C5",
+          "C7"
+        ],
+        [
+          "C1",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 72 >= incumbent 70"
+    },
+    {
+      "node": 6,
+      "parent": 2,
+      "forbidden_arcs": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C5",
+          "C7"
+        ]
+      ],
+      "branched_arc": [
+        "C5",
+        "C7"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C7"
+        ],
+        [
+          "C5",
+          "C4"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C5",
+          "C4",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
+    },
+    {
+      "node": 7,
+      "parent": 2,
+      "forbidden_arcs": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "branched_arc": [
+        "C7",
+        "Base"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C2"
+        ],
+        [
+          "C1",
+          "C6"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C4"
+        ],
+        [
+          "C4",
+          "Base"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "C5"
+        ]
+      ],
+      "cost": 76,
+      "subtours": [
+        [
+          "Base",
+          "C2",
+          "C1",
+          "C6",
+          "C3",
+          "C4"
+        ],
+        [
+          "C5",
+          "C7"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 76 >= incumbent 70"
+    },
+    {
+      "node": 8,
+      "parent": 1,
+      "forbidden_arcs": [
+        [
+          "C7",
+          "C5"
+        ]
+      ],
+      "branched_arc": [
+        "C7",
+        "C5"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "C1",
+          "C6"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C4"
+        ],
+        [
+          "C4",
+          "C2"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 64,
+      "subtours": [
+        [
+          "Base",
+          "C5",
+          "C7"
+        ],
+        [
+          "C1",
+          "C6",
+          "C3",
+          "C4",
+          "C2"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "branch",
+      "note": "branch on arcs of the smallest subtour: Base->C5, C5->C7, C7->Base"
+    },
+    {
+      "node": 9,
+      "parent": 8,
+      "forbidden_arcs": [
+        [
+          "C7",
+          "C5"
+        ],
+        [
+          "Base",
+          "C5"
+        ]
+      ],
+      "branched_arc": [
+        "Base",
+        "C5"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "C4"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 64,
+      "subtours": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "branch",
+      "note": "branch on arcs of the smallest subtour: Base->C7, C7->Base"
+    },
+    {
+      "node": 10,
+      "parent": 9,
+      "forbidden_arcs": [
+        [
+          "C7",
+          "C5"
+        ],
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "Base",
+          "C7"
+        ]
+      ],
+      "branched_arc": [
+        "Base",
+        "C7"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C4"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C4",
+          "C5",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
+    },
+    {
+      "node": 11,
+      "parent": 9,
+      "forbidden_arcs": [
+        [
+          "C7",
+          "C5"
+        ],
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "branched_arc": [
+        "C7",
+        "Base"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "C4"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C7",
+          "C4",
+          "C5"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
+    },
+    {
+      "node": 12,
+      "parent": 8,
+      "forbidden_arcs": [
+        [
+          "C7",
+          "C5"
+        ],
+        [
+          "C5",
+          "C7"
+        ]
+      ],
+      "branched_arc": [
+        "C5",
+        "C7"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "C4"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 64,
+      "subtours": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "branch",
+      "note": "branch on arcs of the smallest subtour: Base->C7, C7->Base"
+    },
+    {
+      "node": 13,
+      "parent": 12,
+      "forbidden_arcs": [
+        [
+          "C7",
+          "C5"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "Base",
+          "C7"
+        ]
+      ],
+      "branched_arc": [
+        "Base",
+        "C7"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C7"
+        ],
+        [
+          "C5",
+          "C4"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C5",
+          "C4",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
+    },
+    {
+      "node": 14,
+      "parent": 12,
+      "forbidden_arcs": [
+        [
+          "C7",
+          "C5"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "branched_arc": [
+        "C7",
+        "Base"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "C4"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C7",
+          "C4",
+          "C5"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
+    },
+    {
+      "node": 15,
+      "parent": 8,
+      "forbidden_arcs": [
+        [
+          "C7",
+          "C5"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "branched_arc": [
+        "C7",
+        "Base"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "C4"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C7",
+          "C4",
+          "C5"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
+    },
+    {
+      "node": 16,
+      "parent": 1,
+      "forbidden_arcs": [
+        [
+          "C5",
+          "Base"
+        ]
+      ],
+      "branched_arc": [
+        "C5",
+        "Base"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "C1",
+          "C6"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C4"
+        ],
+        [
+          "C4",
+          "C2"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 64,
+      "subtours": [
+        [
+          "Base",
+          "C5",
+          "C7"
+        ],
+        [
+          "C1",
+          "C6",
+          "C3",
+          "C4",
+          "C2"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "branch",
+      "note": "branch on arcs of the smallest subtour: Base->C5, C5->C7, C7->Base"
+    },
+    {
+      "node": 17,
+      "parent": 16,
+      "forbidden_arcs": [
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "Base",
+          "C5"
+        ]
+      ],
+      "branched_arc": [
+        "Base",
+        "C5"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "C4"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 64,
+      "subtours": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "branch",
+      "note": "branch on arcs of the smallest subtour: Base->C7, C7->Base"
+    },
+    {
+      "node": 18,
+      "parent": 17,
+      "forbidden_arcs": [
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "Base",
+          "C7"
+        ]
+      ],
+      "branched_arc": [
+        "Base",
+        "C7"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C4"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C4",
+          "C5",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
+    },
+    {
+      "node": 19,
+      "parent": 17,
+      "forbidden_arcs": [
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "branched_arc": [
+        "C7",
+        "Base"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "Base"
+        ],
+        [
+          "C5",
+          "C4"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "C5"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C7",
+          "C5",
+          "C4"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
+    },
+    {
+      "node": 20,
+      "parent": 16,
+      "forbidden_arcs": [
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "C5",
+          "C7"
+        ]
+      ],
+      "branched_arc": [
+        "C5",
+        "C7"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ],
+        [
+          "C5",
+          "C4"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 64,
+      "subtours": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C5"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "branch",
+      "note": "branch on arcs of the smallest subtour: Base->C7, C7->Base"
+    },
+    {
+      "node": 21,
+      "parent": 20,
+      "forbidden_arcs": [
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "Base",
+          "C7"
+        ]
+      ],
+      "branched_arc": [
+        "Base",
+        "C7"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C5"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "C7"
+        ],
+        [
+          "C5",
+          "C4"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C5",
+          "C4",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
+    },
+    {
+      "node": 22,
+      "parent": 20,
+      "forbidden_arcs": [
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "C5",
+          "C7"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "branched_arc": [
+        "C7",
+        "Base"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "Base"
+        ],
+        [
+          "C5",
+          "C4"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "C5"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C7",
+          "C5",
+          "C4"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
+    },
+    {
+      "node": 23,
+      "parent": 16,
+      "forbidden_arcs": [
+        [
+          "C5",
+          "Base"
+        ],
+        [
+          "C7",
+          "Base"
+        ]
+      ],
+      "branched_arc": [
+        "C7",
+        "Base"
+      ],
+      "assignment": [
+        [
+          "Base",
+          "C7"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C2",
+          "C1"
+        ],
+        [
+          "C3",
+          "C6"
+        ],
+        [
+          "C4",
+          "Base"
+        ],
+        [
+          "C5",
+          "C4"
+        ],
+        [
+          "C6",
+          "C3"
+        ],
+        [
+          "C7",
+          "C5"
+        ]
+      ],
+      "cost": 70,
+      "subtours": [
+        [
+          "Base",
+          "C7",
+          "C5",
+          "C4"
+        ],
+        [
+          "C1",
+          "C2"
+        ],
+        [
+          "C3",
+          "C6"
+        ]
+      ],
+      "incumbent": 70,
+      "status": "pruned",
+      "note": "bound 70 >= incumbent 70"
     }
-  ],
-  "_fixture_note": "Only the root node (cost 64, two subtours) and the optimal leaf (cost 70) are real. Intermediate B&B nodes are omitted: Part 4 should replace this with the real trace."
+  ]
 }

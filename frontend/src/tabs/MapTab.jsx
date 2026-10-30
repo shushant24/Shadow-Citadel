@@ -9,7 +9,7 @@ export default function MapTab({ scenario }) {
     <section className="panel" aria-label="Map">
       <h2>Map</h2>
       <p className="todo">TODO Part 7: build this tab. Currently renders the raw fixture / API envelope.</p>
-      <Status loading={loading} error={error}>
+      <Status loading={loading} error={error} result={data}>
         <p>Status: <strong>{data?.status}</strong></p>
         <pre>{JSON.stringify(data?.answer, null, 2)}</pre>
       </Status>

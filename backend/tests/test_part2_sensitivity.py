@@ -1,17 +1,17 @@
 import pytest
-from conftest import crafting_lp, pending
+from conftest import CONSTRAINT_NAMES, crafting_lp, pending
 from solvers.bigm import solve_bigm
-from solvers.sensitivity import bottleneck_text, shadow_prices
+from solvers.sensitivity import bottleneck_text, rhs_ranging, shadow_prices
 
 
-def _final_tableau(scenario, minutes):
+def _final_step(scenario, minutes):
     result = solve_bigm(*crafting_lp(scenario, minutes), maximize=True)
-    return result["steps"][-1]["tableau"]
+    return result["steps"][-1]
 
 
 @pending
 def test_shadow_prices_for_50_minutes(scenario):
-    prices = shadow_prices(_final_tableau(scenario, 50))
+    prices = shadow_prices(_final_step(scenario, 50), CONSTRAINT_NAMES)
     assert prices["time"] == pytest.approx(0.75)
     assert prices["weight"] == pytest.approx(0.50)
     assert prices["slots"] == pytest.approx(4.25)
@@ -23,6 +23,14 @@ def test_shadow_prices_for_50_minutes(scenario):
 def test_42_minutes_scores_111(scenario):
     result = solve_bigm(*crafting_lp(scenario, 42), maximize=True)
     assert result["answer"]["z"] == pytest.approx(111)
+    assert result["answer"]["x"] == pytest.approx([13, 0, 0, 1])
+
+
+@pending
+def test_rhs_ranging_covers_the_demo_rhs(scenario):
+    ranges = rhs_ranging(_final_step(scenario, 50), CONSTRAINT_NAMES)
+    low, high = ranges["time"]
+    assert low <= 50 <= high
 
 
 @pending

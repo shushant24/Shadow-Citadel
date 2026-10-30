@@ -24,7 +24,8 @@
         "optimized": 117,
         "unit": "score",
         "gain_pct": null,
-        "direction": "higher_is_better"
+        "direction": "higher_is_better",
+        "naive_note": "Equal-split policy is computed by Part 10 (backend/solvers/baselines.py)"
       },
       {
         "module": "Whole pipeline",
@@ -32,11 +33,12 @@
         "optimized": 562,
         "unit": "score",
         "gain_pct": null,
-        "direction": "higher_is_better"
+        "direction": "higher_is_better",
+        "naive_note": "Naive route leaves 40 min of crafting: infeasible (see fixtures/pipeline_naive.json)"
       }
     ],
     "random_maps": null
   },
   "steps": [],
-  "_fixture_note": "The plan does not define this response shape: the module table is a proposal (see docs/api-contract.md). naive crafting, naive pipeline and the 20-map summary are null because the plan says the team computes them."
+  "_fixture_note": "Shape is defined in docs/api-contract.md. naive crafting/pipeline and the 20-map summary are null until Part 10 computes them."
 }

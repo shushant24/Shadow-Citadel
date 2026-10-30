@@ -2,7 +2,7 @@
 
 
 class Tableau:
-    """Tableau with pivoting. Every pivot should append one item to `steps` (plan Section 6.2, /api/craft)."""
+    """Tableau with pivoting. Every pivot appends one item to `steps` in the craft step format (docs/api-contract.md, validated by contract.py)."""
 
     def __init__(self, *args, **kwargs):
         raise NotImplementedError("Part 1")

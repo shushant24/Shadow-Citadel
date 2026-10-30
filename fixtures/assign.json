@@ -23,7 +23,11 @@
         4
       ]
     ],
-    "total": 445
+    "total": 445,
+    "unassigned": {
+      "rows": [],
+      "cols": []
+    }
   },
   "steps": [
     {
@@ -66,7 +70,10 @@
         ]
       ],
       "covered_rows": [],
-      "covered_cols": []
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "c_ij = P_max - p_ij with P_max = 97"
     },
     {
       "phase": "row_reduce",
@@ -108,7 +115,10 @@
         ]
       ],
       "covered_rows": [],
-      "covered_cols": []
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "subtract each row minimum"
     },
     {
       "phase": "col_reduce",
@@ -150,7 +160,61 @@
         ]
       ],
       "covered_rows": [],
-      "covered_cols": []
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "subtract each column minimum"
+    },
+    {
+      "phase": "cover",
+      "matrix": [
+        [
+          15,
+          33,
+          0,
+          54,
+          0
+        ],
+        [
+          13,
+          21,
+          0,
+          2,
+          10
+        ],
+        [
+          14,
+          0,
+          16,
+          47,
+          35
+        ],
+        [
+          0,
+          17,
+          23,
+          35,
+          10
+        ],
+        [
+          27,
+          17,
+          42,
+          0,
+          29
+        ]
+      ],
+      "covered_rows": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "5 line(s) needed = n, optimal"
     },
     {
       "phase": "final",
@@ -193,7 +257,10 @@
       ],
       "covered_rows": [],
       "covered_cols": [],
-      "pairs": [
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "zeros selected: one per row and column",
+      "selected": [
         [
           1,
           5
@@ -216,6 +283,5 @@
         ]
       ]
     }
-  ],
-  "_fixture_note": "Steps cover convert, row_reduce, col_reduce and final only. Part 3 should add the cover/adjust phases once the real engine emits them."
+  ]
 }

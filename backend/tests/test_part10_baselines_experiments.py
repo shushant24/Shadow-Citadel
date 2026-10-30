@@ -1,6 +1,5 @@
-import pytest
-from conftest import check_envelope, pending
-from solvers.baselines import greedy_assignment, nearest_neighbour
+from conftest import check_contract, pending
+from solvers.baselines import equal_split_crafting, greedy_assignment, nearest_neighbour
 from solvers.experiments import run_experiments
 
 
@@ -20,5 +19,19 @@ def test_greedy_assignment_is_414(scenario):
 @pending
 def test_experiments_cover_20_maps():
     result = run_experiments(n_maps=20, seed=0)
-    check_envelope(result)
+    check_contract("experiments", result)
     assert len(result["answer"]["random_maps"]["maps"]) == 20
+
+
+@pending
+def test_equal_split_crafting_is_infeasible_for_40_minutes_and_worse_than_117_for_50(scenario):
+    assert equal_split_crafting(scenario, 40) is None
+    plan = equal_split_crafting(scenario, 50)
+    assert plan is not None and sum(plan[0]) == 14 and plan[1] <= 117  # the optimum is 117, naive cannot beat it
+
+
+@pending
+def test_experiments_are_reproducible_for_the_same_seed():
+    a, b = run_experiments(n_maps=3, seed=5), run_experiments(n_maps=3, seed=5)
+    strip = lambda r: [{k: v for k, v in m.items() if "ms" not in k} for m in r["answer"]["random_maps"]["maps"]]
+    assert strip(a) == strip(b)

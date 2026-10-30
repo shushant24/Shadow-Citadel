@@ -1,0 +1,332 @@
+{
+  "status": "optimal",
+  "answer": {
+    "pairs": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        4,
+        4
+      ]
+    ],
+    "total": 116,
+    "unassigned": {
+      "rows": [],
+      "cols": []
+    }
+  },
+  "steps": [
+    {
+      "phase": "convert",
+      "matrix": [
+        [
+          14,
+          21,
+          30,
+          28
+        ],
+        [
+          12,
+          6,
+          27,
+          18
+        ],
+        [
+          27,
+          3,
+          21,
+          18
+        ],
+        [
+          28,
+          0,
+          30,
+          3
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "c_ij = P_max - p_ij with P_max = 40"
+    },
+    {
+      "phase": "row_reduce",
+      "matrix": [
+        [
+          0,
+          7,
+          16,
+          14
+        ],
+        [
+          6,
+          0,
+          21,
+          12
+        ],
+        [
+          24,
+          0,
+          18,
+          15
+        ],
+        [
+          28,
+          0,
+          30,
+          3
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "subtract each row minimum"
+    },
+    {
+      "phase": "col_reduce",
+      "matrix": [
+        [
+          0,
+          7,
+          0,
+          11
+        ],
+        [
+          6,
+          0,
+          5,
+          9
+        ],
+        [
+          24,
+          0,
+          2,
+          12
+        ],
+        [
+          28,
+          0,
+          14,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "subtract each column minimum"
+    },
+    {
+      "phase": "cover",
+      "matrix": [
+        [
+          0,
+          7,
+          0,
+          11
+        ],
+        [
+          6,
+          0,
+          5,
+          9
+        ],
+        [
+          24,
+          0,
+          2,
+          12
+        ],
+        [
+          28,
+          0,
+          14,
+          0
+        ]
+      ],
+      "covered_rows": [
+        1,
+        4
+      ],
+      "covered_cols": [
+        2
+      ],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "3 line(s) needed < 4, adjust"
+    },
+    {
+      "phase": "adjust",
+      "matrix": [
+        [
+          0,
+          9,
+          0,
+          11
+        ],
+        [
+          4,
+          0,
+          3,
+          7
+        ],
+        [
+          22,
+          0,
+          0,
+          10
+        ],
+        [
+          28,
+          2,
+          14,
+          0
+        ]
+      ],
+      "covered_rows": [
+        1,
+        4
+      ],
+      "covered_cols": [
+        2
+      ],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "smallest uncovered = 2: subtract from uncovered, add to doubly covered",
+      "delta": 2
+    },
+    {
+      "phase": "cover",
+      "matrix": [
+        [
+          0,
+          9,
+          0,
+          11
+        ],
+        [
+          4,
+          0,
+          3,
+          7
+        ],
+        [
+          22,
+          0,
+          0,
+          10
+        ],
+        [
+          28,
+          2,
+          14,
+          0
+        ]
+      ],
+      "covered_rows": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "4 line(s) needed = n, optimal"
+    },
+    {
+      "phase": "final",
+      "matrix": [
+        [
+          0,
+          9,
+          0,
+          11
+        ],
+        [
+          4,
+          0,
+          3,
+          7
+        ],
+        [
+          22,
+          0,
+          0,
+          10
+        ],
+        [
+          28,
+          2,
+          14,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "zeros selected: one per row and column",
+      "selected": [
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          4
+        ]
+      ]
+    }
+  ],
+  "_fixture_note": "Seeded 4x4 example (Random(11)) that needs an adjust step; used to build the Matchups cover/adjust view.",
+  "input": {
+    "scores": [
+      [
+        26,
+        19,
+        10,
+        12
+      ],
+      [
+        28,
+        34,
+        13,
+        22
+      ],
+      [
+        13,
+        37,
+        19,
+        22
+      ],
+      [
+        12,
+        40,
+        10,
+        37
+      ]
+    ],
+    "maximize": true
+  }
+}

@@ -1,4 +1,4 @@
-.PHONY: setup setup-backend setup-frontend dev-backend dev-frontend test test-backend test-frontend lint
+.PHONY: contract setup setup-backend setup-frontend dev-backend dev-frontend test test-backend test-frontend lint
 
 setup: setup-backend setup-frontend
 
@@ -22,6 +22,9 @@ test-backend:
 
 test-frontend:
 	cd frontend && npm test
+
+contract:
+	cd backend && .venv/bin/pytest -q tests/test_contract_shapes.py tests/test_data_integrity.py
 
 lint:
 	cd backend && .venv/bin/ruff check .

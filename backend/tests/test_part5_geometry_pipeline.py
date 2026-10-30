@@ -1,5 +1,4 @@
-import pytest
-from conftest import check_envelope, pending
+from conftest import check_contract, check_envelope, pending
 from solvers.geometry import random_map, time_matrix as build_time_matrix
 from solvers.hull import convex_hull
 from solvers.pipeline import run_pipeline
@@ -48,6 +47,22 @@ def test_random_map_is_seeded_and_sized():
 @pending
 def test_pipeline_total_is_562(scenario):
     result = run_pipeline(scenario)
-    check_envelope(result)
-    assert result["answer"] == {"tour_time": 70, "craft_time": 50, "combat": 445,
-                                "crafting": 117, "total": 562}
+    check_contract("pipeline", result)
+    assert {k: result["answer"][k] for k in ("tour_time", "craft_time", "combat", "crafting", "total")} == \
+        {"tour_time": 70, "craft_time": 50, "combat": 445, "crafting": 117, "total": 562}
+    assert result["answer"]["route_policy"] == "optimal"
+
+
+@pending
+def test_pipeline_with_the_naive_route_leaves_crafting_infeasible(scenario):
+    result = run_pipeline(scenario, route="nearest_neighbour")
+    check_contract("pipeline", result)
+    assert result["status"] == "infeasible"
+    assert (result["answer"]["tour_time"], result["answer"]["craft_time"]) == (80, 40)
+    assert result["answer"]["combat"] == 445 and result["answer"]["total"] is None
+
+
+@pending
+def test_time_matrix_is_rounded_euclidean_for_arbitrary_points():
+    assert build_time_matrix({"A": (0, 0), "B": (3, 4), "C": (6, 8)}, ["A", "B", "C"]) == \
+        [[0, 5, 10], [5, 0, 5], [10, 5, 0]]

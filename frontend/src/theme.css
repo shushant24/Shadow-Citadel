@@ -16,3 +16,4 @@ body { margin: 0; background: var(--bg); color: var(--text); }
 .panel { background: var(--panel); border-radius: 8px; padding: 16px; }
 .error { color: var(--danger); }
 .todo { color: var(--muted); font-style: italic; }
+.warn { color: #ffd166; border-left: 3px solid #ffd166; padding-left: 8px; }

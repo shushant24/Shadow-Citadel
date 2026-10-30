@@ -2,6 +2,8 @@
 
 CS2105 Optimization Techniques · Option 2 (RPG / Battle Royale Raid Score Optimizer)
 
+> **Note (v2):** where Section 6 and `docs/api-contract.md` differ, the contract wins. It adds the tableau/step fields, `/api/route` points, `/api/pipeline?route=`, and the infeasible message rules. Open questions are answered in `docs/decisions.md`.
+
 > Repo creation and tooling installation are **not** assigned to anyone. Work is divided into 10 parts: **5 backend (solvers + API)** and **5 frontend (web app)**. The dataset, API contract and mock fixtures in Sections 3 and 6 are the starting point for everyone, so frontend and backend can work in parallel.
 
 ---

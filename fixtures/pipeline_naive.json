@@ -1,0 +1,24 @@
+{
+  "status": "infeasible",
+  "answer": {
+    "tour_time": 80,
+    "craft_time": 40,
+    "combat": 445,
+    "crafting": null,
+    "total": null,
+    "route_policy": "nearest_neighbour",
+    "tour": [
+      "Base",
+      "C7",
+      "C5",
+      "C3",
+      "C4",
+      "C1",
+      "C6",
+      "C2",
+      "Base"
+    ],
+    "message": "The nearest-neighbour tour takes 80 minutes, leaving 40 minutes of crafting time: the 14-slot crafting plan is infeasible, so there is no total score."
+  },
+  "steps": []
+}

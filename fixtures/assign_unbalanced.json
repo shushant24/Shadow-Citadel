@@ -1,0 +1,295 @@
+{
+  "status": "optimal",
+  "answer": {
+    "pairs": [
+      [
+        1,
+        3
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        4,
+        1
+      ],
+      [
+        5,
+        4
+      ]
+    ],
+    "total": 385,
+    "unassigned": {
+      "rows": [
+        2
+      ],
+      "cols": []
+    }
+  },
+  "steps": [
+    {
+      "phase": "convert",
+      "matrix": [
+        [
+          15,
+          33,
+          0,
+          54,
+          0
+        ],
+        [
+          49,
+          57,
+          36,
+          38,
+          0
+        ],
+        [
+          14,
+          0,
+          16,
+          47,
+          0
+        ],
+        [
+          2,
+          19,
+          25,
+          37,
+          0
+        ],
+        [
+          28,
+          18,
+          43,
+          1,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [
+        5
+      ],
+      "note": "c_ij = P_max - p_ij with P_max = 97 ; dummy zero row/column added"
+    },
+    {
+      "phase": "row_reduce",
+      "matrix": [
+        [
+          15,
+          33,
+          0,
+          54,
+          0
+        ],
+        [
+          49,
+          57,
+          36,
+          38,
+          0
+        ],
+        [
+          14,
+          0,
+          16,
+          47,
+          0
+        ],
+        [
+          2,
+          19,
+          25,
+          37,
+          0
+        ],
+        [
+          28,
+          18,
+          43,
+          1,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [
+        5
+      ],
+      "note": "subtract each row minimum"
+    },
+    {
+      "phase": "col_reduce",
+      "matrix": [
+        [
+          13,
+          33,
+          0,
+          53,
+          0
+        ],
+        [
+          47,
+          57,
+          36,
+          37,
+          0
+        ],
+        [
+          12,
+          0,
+          16,
+          46,
+          0
+        ],
+        [
+          0,
+          19,
+          25,
+          36,
+          0
+        ],
+        [
+          26,
+          18,
+          43,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [
+        5
+      ],
+      "note": "subtract each column minimum"
+    },
+    {
+      "phase": "cover",
+      "matrix": [
+        [
+          13,
+          33,
+          0,
+          53,
+          0
+        ],
+        [
+          47,
+          57,
+          36,
+          37,
+          0
+        ],
+        [
+          12,
+          0,
+          16,
+          46,
+          0
+        ],
+        [
+          0,
+          19,
+          25,
+          36,
+          0
+        ],
+        [
+          26,
+          18,
+          43,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [
+        5
+      ],
+      "note": "5 line(s) needed = n, optimal"
+    },
+    {
+      "phase": "final",
+      "matrix": [
+        [
+          13,
+          33,
+          0,
+          53,
+          0
+        ],
+        [
+          47,
+          57,
+          36,
+          37,
+          0
+        ],
+        [
+          12,
+          0,
+          16,
+          46,
+          0
+        ],
+        [
+          0,
+          19,
+          25,
+          36,
+          0
+        ],
+        [
+          26,
+          18,
+          43,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [
+        5
+      ],
+      "note": "zeros selected: one per row and column",
+      "selected": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          5,
+          4
+        ]
+      ]
+    }
+  ]
+}

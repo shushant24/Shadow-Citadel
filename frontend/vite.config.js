@@ -14,6 +14,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    env: { VITE_USE_FIXTURES: "true" }, // tests always run on fixtures, whatever frontend/.env says
     setupFiles: ["./src/setupTests.js"],
   },
 });
