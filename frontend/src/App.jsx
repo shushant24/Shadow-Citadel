@@ -18,27 +18,60 @@ const TABS = [
 export default function App() {
   const [active, setActive] = useState("map");
   const { loading, error, data: loaded } = useApi(() => api.scenario(), []);
-  // `edited` holds the user's changes from ScenarioPanel; every tab receives the edited scenario if there is one.
+
+  // `edited` holds user-modified scenario fields from ScenarioPanel.
+  // Every downstream tab receives the active scenario.
   const [edited, setEdited] = useState(null);
   const scenario = edited ?? loaded;
-  const Active = TABS.find((t) => t.id === active).Component;
+  const isEdited = edited !== null;
+
+  const ActiveComponent = TABS.find((t) => t.id === active)?.Component ?? MapTab;
+
+  const handleResetScenario = () => {
+    setEdited(null);
+  };
 
   return (
     <main className="app">
-      <h1>Shadow Citadel Raid Optimizer</h1>
-      <p className="todo" title={USE_FIXTURES ? FIXTURE_LIMITS : undefined}>
-        Data source: {USE_FIXTURES ? "fixtures (offline, canned results: sliders, drag and edits do not recompute)" : "live API"}
-      </p>
-      <nav className="tabs" role="tablist">
+      <header className="app-header">
+        <div className="title-row">
+          <h1>Shadow Citadel Raid Optimizer</h1>
+          <span className={`source-badge ${USE_FIXTURES ? "badge-fixtures" : "badge-live"}`}>
+            {USE_FIXTURES ? "Fixtures Mode" : "Live Backend"}
+          </span>
+        </div>
+        <p className="data-source-info" title={USE_FIXTURES ? FIXTURE_LIMITS : undefined}>
+          Data source:{" "}
+          {USE_FIXTURES
+            ? "fixtures (offline, canned results: sliders, drag and edits do not recompute)"
+            : "live API (connected to http://localhost:8000)"}
+        </p>
+      </header>
+
+      <nav className="tabs" role="tablist" aria-label="Raid Optimizer Modules">
         {TABS.map((t) => (
-          <button key={t.id} role="tab" aria-selected={active === t.id} onClick={() => setActive(t.id)}>
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={active === t.id}
+            className={`tab-btn ${active === t.id ? "active" : ""}`}
+            onClick={() => setActive(t.id)}
+          >
             {t.label}
           </button>
         ))}
       </nav>
+
       <Status loading={loading} error={error}>
-        <ScenarioPanel scenario={scenario} onChange={setEdited} />
-        <Active scenario={scenario} />
+        <ScenarioPanel
+          scenario={scenario}
+          onChange={setEdited}
+          onReset={handleResetScenario}
+          isEdited={isEdited}
+        />
+        <div className="tab-container" role="tabpanel">
+          <ActiveComponent scenario={scenario} />
+        </div>
       </Status>
     </main>
   );

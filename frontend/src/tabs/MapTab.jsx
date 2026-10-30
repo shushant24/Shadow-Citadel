@@ -4,7 +4,11 @@ import { useApi } from "../useApi.js";
 import Status from "../components/Status.jsx";
 
 export default function MapTab({ scenario }) {
-  const { loading, error, data } = useApi(() => api.hull({ ...scenario.nodes, ...scenario.loot }), [scenario]);
+  // Only re-fetch if nodes or loot change
+  const { loading, error, data } = useApi(
+    () => api.hull({ ...(scenario?.nodes || {}), ...(scenario?.loot || {}) }),
+    [scenario?.nodes, scenario?.loot]
+  );
   return (
     <section className="panel" aria-label="Map">
       <h2>Map</h2>
