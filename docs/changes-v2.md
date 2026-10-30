@@ -4,6 +4,7 @@
 - `tests/test_no_forbidden_imports.py` scanned raw text, so the word "scipy" in `solvers/__init__.py`'s docstring made the "already passing" guard fail. It now parses with `ast` (docstrings and comments are ignored) and has a self-test.
 - Unused `import pytest` in two test files would have failed the `ruff check .` step of CI. Removed.
 - `api.js` returned the 117-score plan for 42 minutes (the plan says 111). Added `craft_42.json` and routing for it.
+- CI `ruff check` failed (33 findings) because `pyproject.toml` did not say which rules to run, so a newer ruff applied extra defaults such as import sorting. The rule set is now explicit (`E4, E7, E9, F`), and the two real findings were fixed: a lambda assigned to a name in `test_part10_baselines_experiments.py`, and over-long lines there.
 - `vitest` could break if a developer's `frontend/.env` had `VITE_USE_FIXTURES=false`. The test config now forces fixtures.
 
 ## Contract gaps closed (the plan's top risk)

@@ -10,3 +10,10 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
+# Correctness rules only: pycodestyle errors (E4, E7, E9) and pyflakes (F).
+# Spelled out on purpose: with no `select`, ruff uses its built-in defaults, which can change between
+# releases and would then break CI without any change in our code. Import sorting and line length
+# (docstrings and test data are long on purpose) are not enforced.
+select = ["E4", "E7", "E9", "F"]
