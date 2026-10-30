@@ -1,38 +1,87 @@
-# Shadow Citadel Raid Optimizer
+# Task 2: Sensitivity Analysis & Crafting Service
 
-CS2105 Optimization Techniques, Option 2 (RPG / Battle Royale raid score optimizer).
-A four-stage pipeline of hand-written solvers: convex hull, TSP (Hungarian + subtour branching), weapon assignment (Hungarian), crafting LP (Big-M / Two-Phase simplex with shadow prices). Demo scenario target: **445 combat + 117 crafting = 562**.
+**CS2105 Optimization Techniques · Option 2: Shadow Citadel Raid Optimizer**
 
-Full plan: [`docs/demo_plan.md`](docs/demo_plan.md) · Who builds what: [`docs/parts.md`](docs/parts.md) · JSON contract: [`docs/api-contract.md`](docs/api-contract.md) · Open decisions and defaults: [`docs/decisions.md`](docs/decisions.md) · What changed in this version: [`docs/changes-v2.md`](docs/changes-v2.md)
+This repository contains the standalone, fully tested implementation of **Task 2 (Backend Part 2: Sensitivity and Crafting Service)**.
 
-## Layout
+---
+
+## 1. Directory Structure
+
+```text
+task2/
+├── README.md                      # Overview & report documentation
+├── MERGE_GUIDE.md                 # Step-by-step guide to merge into main project
+├── envelope.py                    # Shared response envelope contract
+├── contract.py                    # Shared API contract validator
+├── conftest.py                    # Pytest configuration & scenario fixtures
+├── api_craft.py                   # Root forwarding module
+├── test_part2_sensitivity.py      # Official Part 2 test suite
+├── api/
+│   ├── __init__.py
+│   └── api_craft.py               # FastAPI /api/craft endpoint
+├── solvers/
+│   ├── __init__.py
+│   ├── simplex.py                 # Simplex Tableau engine (Part 1 dependency)
+│   ├── bigm.py                    # Big-M solver (Part 1 dependency)
+│   ├── twophase.py                # Two-Phase solver (Part 1 dependency)
+│   └── sensitivity.py             # Shadow prices, ranging & bottleneck (Part 2)
+├── tests/
+│   └── test_craft_api.py          # API endpoint unit tests
+└── fixtures/
+    └── craft.json                 # Reference mock fixture for Loadout tab
 ```
-data/        scenario.json (plan 3.5) and time_matrix.json (plan 3.2, the expected oracle)
-fixtures/    shared mock responses with REAL traces (tableaux, B&B nodes, Hungarian phases); the frontend
-             runs on them, backend tests check against them
-backend/     FastAPI app; solvers/ (hand-written, stubs), api/ (one router per endpoint),
-             contract.py (executable JSON contract, no dependencies)
-frontend/    React + Vite; 4 tabs (Map, Matchups, Loadout, Summary) + shared step player and Status
-docs/        plan, parts/owners, API contract, decisions, report template
-```
 
-## Quick start
+---
+
+## 2. Mathematical Formulation
+
+Let:
+* $x_1$: Health potions
+* $x_2$: Stamina potions
+* $x_3$: Damage elixirs
+* $x_4$: Shield scrolls
+
+$$\text{Maximize } Z = 8x_1 + 6x_2 + 10x_3 + 7x_4$$
+
+Subject to 5 constraints:
+1. **Craft Time**: $3x_1 + 4x_2 + 5x_3 + 3x_4 \le T_{\text{craft}}$ (where $T_{\text{craft}} = 120 - T_{\text{tour}}$)
+2. **Weight Limit**: $3x_1 + 2x_2 + 4x_3 + 1x_4 \le 40$
+3. **Stamina Limit**: $4x_1 + 1x_2 + 5x_3 + 3x_4 \le 90$
+4. **Minimum Survival**: $5x_1 + 2x_2 + 0x_3 + 3x_4 \ge 30$
+5. **Inventory Slots**: $x_1 + x_2 + x_3 + x_4 = 14$
+6. **Non-negativity**: $x_1, x_2, x_3, x_4 \ge 0$
+
+---
+
+## 3. Results & Expected Outputs
+
+| Case | Time Limit | Status | Score ($Z$) | Item Quantities ($x$) | Key Sensitivity / Shadow Prices |
+|---|---|---|---|---|---|
+| **Demo Base** | $50$ min | `optimal` | **$117$** | $[7, 0, 4, 3]$ | `time: 0.75`, `weight: 0.50`, `slots: 4.25` |
+| **Lower Range** | $42$ min | `optimal` | **$111$** | $[13, 0, 0, 1]$ | Valid within RHS range ($117 - 8 \times 0.75 = 111$) |
+| **Naive Route** | $40$ min | `infeasible` | — | — | Artificial variable remains; 14 slots cannot be crafted |
+
+* **Bottleneck**: `"Crafting time is the bottleneck: each extra minute adds 0.75 score."`
+
+---
+
+## 4. Running the Tests
+
+To run all tests in this folder:
+
 ```bash
-make setup            # venv + pip install, npm install
-make dev-backend      # http://localhost:8000  (docs at /docs)
-make dev-frontend     # http://localhost:5173  (starts on fixtures, no backend needed)
-make test             # pytest + vitest
+# Run the official sensitivity test suite
+pytest test_part2_sensitivity.py -v
+
+# Run the API endpoint tests
+pytest tests/test_craft_api.py -v
 ```
-Without `make`: `cd backend && python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt && .venv/bin/pytest -q`, and `cd frontend && npm install && npm run dev`.
 
-After the first `npm install`, **commit `frontend/package-lock.json`** so everyone (and CI) gets the same versions.
+All tests pass without warnings or errors.
 
-To use the live API instead of fixtures: `cp frontend/.env.example frontend/.env` and set `VITE_USE_FIXTURES=false`. Fixture mode is canned (see "Fixture mode" in the contract): sliders, edits and dragging only recompute against the live backend.
+---
 
-## How the test suite guides the work
-- Each part's "Done when" values are written as tests marked `@pending` (a strict expected failure while the solver raises `NotImplementedError`). When your solver is correct the strict marker turns the test red with XPASS: delete `@pending` and it becomes a normal test. A wrong answer fails normally.
-- `tests/test_contract_shapes.py` checks every fixture against `backend/contract.py` and replays the traces (B&B tree, tableau pricing, Hungarian phases). It passes today and must keep passing. **Every endpoint and solver test also validates its output with `check_contract(...)`**, so a format drift fails a test instead of breaking the frontend a week later.
-- `tests/test_data_integrity.py` and `tests/test_no_forbidden_imports.py` guard the shared data and the "no library solvers" rule (checked with `ast`: no scipy / linprog / pulp inside `solvers/` or `api/`; use such tools only as test oracles in `tests/`).
+## 5. Merging into the Main Team Repository
 
-## Status
-All solvers and tabs are stubs. `GET /api/scenario` and `GET /api/health` work; other endpoints return 501 until their part lands. The fixtures and contract are complete, so every tab can be built against realistic data today.
+See [`MERGE_GUIDE.md`](./MERGE_GUIDE.md) for full instructions on creating a branch, committing, creating a Pull Request, and wiring the endpoint to `app.py`, `pipeline.py`, and the Part 9 Loadout frontend tab.

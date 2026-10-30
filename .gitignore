@@ -1,14 +1,8 @@
-# Python
 __pycache__/
 *.pyc
-.venv/
+*.pyo
 .pytest_cache/
-.ruff_cache/
-# Node
-node_modules/
-frontend/dist/
-frontend/.env
-# OS / editor
 .DS_Store
-.idea/
-.vscode/
+*.egg-info/
+.coverage
+htmlcov/
