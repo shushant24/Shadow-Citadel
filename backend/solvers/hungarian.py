@@ -166,8 +166,8 @@ def solve_assignment(scores: Sequence[Sequence[Real]], maximize: bool = True) ->
         item: dict[str, Any] = {
             "phase": phase,
             "matrix": _matrix_numbers(working),
-            "covered_rows": [i + 1 for i in covered_rows],
-            "covered_cols": [i + 1 for i in covered_cols],
+            "covered_rows": list(covered_rows),
+            "covered_cols": list(covered_cols),
             "dummy_rows": dummy_rows[:],
             "dummy_cols": dummy_cols[:],
             "note": step_note,
@@ -176,7 +176,8 @@ def solve_assignment(scores: Sequence[Sequence[Real]], maximize: bool = True) ->
             item.update(extra)
         steps.append(item)
 
-    add_step("convert", note)
+    if maximize:
+        add_step("convert", note)
 
     # Row and column reductions.
     for ri in range(size):
