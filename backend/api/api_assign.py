@@ -1,4 +1,5 @@
 """Part 3: POST /api/assign assignment endpoint."""
+
 from __future__ import annotations
 
 from typing import List
