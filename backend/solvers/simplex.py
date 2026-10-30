@@ -2,21 +2,36 @@
 
 from __future__ import annotations
 
+import math
+
 
 def validate_inputs(c, A, b, senses) -> None:
-    """Validate input dimensions and values."""
+    """Validate input dimensions, types, finiteness, and values."""
     if not isinstance(c, (list, tuple)) or len(c) == 0:
         raise ValueError("c must be a non-empty list of coefficients")
     n_vars = len(c)
+    for j, v in enumerate(c):
+        if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v):
+            raise ValueError(f"c[{j}] is not a finite number: {v!r}")
+
     if not isinstance(A, (list, tuple)) or not isinstance(b, (list, tuple)) or not isinstance(senses, (list, tuple)):
         raise ValueError("A, b, and senses must be lists or tuples")
     m_cons = len(A)
     if len(b) != m_cons or len(senses) != m_cons:
         raise ValueError(f"Length mismatch: len(A)={m_cons}, len(b)={len(b)}, len(senses)={len(senses)}")
+
+    for i, v in enumerate(b):
+        if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v):
+            raise ValueError(f"b[{i}] is not a finite number: {v!r}")
+
     for i, row in enumerate(A):
         if not isinstance(row, (list, tuple)) or len(row) != n_vars:
             actual_len = len(row) if isinstance(row, (list, tuple)) else "N/A"
             raise ValueError(f"Row {i} of A has length {actual_len}, expected {n_vars}")
+        for j, v in enumerate(row):
+            if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v):
+                raise ValueError(f"A[{i}][{j}] is not a finite number: {v!r}")
+
     for i, s in enumerate(senses):
         if s not in {"<=", ">=", "="}:
             raise ValueError(f"Invalid sense {s!r} at index {i}; must be '<=', '>=', or '='")
@@ -85,13 +100,27 @@ class Tableau:
 
     # ------------------------------------------------------------------ pivot selection
     def _entering_column(self, blands: bool = False) -> int | None:
-        """Find entering variable (most negative z_j - c_j, lexicographic on (m, c)).
+        """Find entering variable (lexicographic on (m, c)).
         Excluded columns (such as artificial columns in Phase 2) are skipped.
-        With Bland's rule, pick the smallest-index eligible column with a negative indicator."""
+
+        Big-M is strictly tiered: if any candidate has m < 0, only m-negative columns
+        are eligible. In Bland mode, Bland's smallest-index rule applies within the
+        active tier.
+        """
+        eps = -1e-10
+
+        # Tier 1: Check if any eligible column has m < 0
+        has_negative_m = False
+        for j in range(self.n_cols):
+            if self.columns[j] in self.excluded_columns:
+                continue
+            if self.zrow_m[j] < eps:
+                has_negative_m = True
+                break
+
         best_col = None
         best_m = 0.0
         best_c = 0.0
-        eps = -1e-10
 
         for j in range(self.n_cols):
             if self.columns[j] in self.excluded_columns:
@@ -99,27 +128,29 @@ class Tableau:
 
             m_val = self.zrow_m[j]
             c_val = self.zrow_c[j]
-            # A column is a candidate if its (m, c) indicator is negative
-            # (lexicographic: m first, then c)
-            is_negative = (m_val < eps) or (abs(m_val) < 1e-10 and c_val < eps)
-            if not is_negative:
-                continue
+
+            if has_negative_m:
+                # Only consider columns with m < 0
+                if m_val >= eps:
+                    continue
+            else:
+                # m is zero, consider columns with c < 0
+                if abs(m_val) >= 1e-10 or c_val >= eps:
+                    continue
 
             if blands:
-                # Bland's rule: smallest index
+                # Bland's rule: smallest column index within the active tier
                 if best_col is None:
                     best_col = j
                     best_m = m_val
                     best_c = c_val
-                # Already found a smaller index, keep it
             else:
-                # Most negative (lexicographic)
+                # Dantzig's rule: most negative (m, c)
                 if best_col is None:
                     best_col = j
                     best_m = m_val
                     best_c = c_val
                 else:
-                    # Compare (m_val, c_val) < (best_m, best_c) lexicographically
                     if (m_val < best_m - 1e-10) or \
                        (abs(m_val - best_m) < 1e-10 and c_val < best_c - 1e-10):
                         best_col = j
@@ -133,7 +164,7 @@ class Tableau:
         With Bland's rule, break ties by smallest basis index."""
         best_row = None
         best_ratio = float("inf")
-        best_bland_idx = float("inf")  # column index of the leaving variable for Bland tie-break
+        best_bland_idx = float("inf")
 
         for i in range(self.n_rows):
             a_ij = self.tab[i][col]
@@ -145,7 +176,6 @@ class Tableau:
                 best_row = i
                 best_bland_idx = self._col_index(self.basis[i]) if blands else 0
             elif blands and abs(ratio - best_ratio) < 1e-10:
-                # Bland tie-break: smallest basis variable index
                 idx = self._col_index(self.basis[i])
                 if idx < best_bland_idx:
                     best_row = i
@@ -160,11 +190,9 @@ class Tableau:
         if abs(piv) < 1e-15:
             raise ValueError("Pivot element is zero")
 
-        # Scale pivot row
-        width = self.n_cols + 1  # columns + RHS
+        width = self.n_cols + 1
         self.tab[row] = [self.tab[row][k] / piv for k in range(width)]
 
-        # Eliminate from other rows
         for i in range(self.n_rows):
             if i == row:
                 continue
@@ -173,7 +201,6 @@ class Tableau:
                 continue
             self.tab[i] = [self.tab[i][k] - factor * self.tab[row][k] for k in range(width)]
 
-        # Eliminate from z-rows
         for zrow in (self.zrow_c, self.zrow_m):
             factor = zrow[col]
             if abs(factor) < 1e-15:
@@ -181,11 +208,16 @@ class Tableau:
             for k in range(width):
                 zrow[k] -= factor * self.tab[row][k]
 
-        # Update basis
         self.basis[row] = self.columns[col]
-
-        # Clean near-zero values
         self._clean()
+
+    def pivot_recorded(self, row: int, col: int) -> None:
+        """Perform a pivot and record it as a step in the trace."""
+        entering = self.columns[col]
+        leaving = self.basis[row]
+        self.steps.append(self._snapshot(entering, leaving, [row, col]))
+        self._iteration += 1
+        self.pivot(row, col)
 
     def _clean(self, eps: float = 1e-12) -> None:
         """Round near-zero values to 0 to avoid floating point artifacts."""
@@ -236,14 +268,11 @@ class Tableau:
                 return "unbounded"
 
             leaving = self.basis[row]
-
-            # Record the pre-pivot snapshot (shows which pivot will happen)
             self.steps.append(self._snapshot(entering, leaving, [row, col]))
             self._iteration += 1
 
             self.pivot(row, col)
 
-        # Iteration limit reached without reaching optimality
         return "iteration_limit"
 
     # ------------------------------------------------------------------ reading results

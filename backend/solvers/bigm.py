@@ -144,7 +144,7 @@ def solve_bigm(c, A, b, senses, maximize=True):
         z = _round_val(sign * tableau.zrow_c[-1])
         return envelope("optimal", answer={"x": x, "z": z}, steps=steps)
 
-    return envelope("infeasible", message="Solver did not converge.", steps=steps)
+    raise RuntimeError(f"Unexpected solver status: {status}")
 
 
 def _round_val(v: float, tol: float = 1e-9) -> float:

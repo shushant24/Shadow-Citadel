@@ -1,7 +1,6 @@
 import pytest
 from conftest import check_contract, check_envelope, crafting_lp
 from solvers.bigm import solve_bigm
-from solvers.simplex import Tableau
 from solvers.twophase import solve_twophase
 
 
@@ -111,17 +110,23 @@ def test_bigm_infeasible_not_mislabeled_as_unbounded():
 
 
 def test_input_validation():
-    """Invalid dimensions or senses must raise ValueError."""
+    """Invalid dimensions, senses, or non-finite numbers must raise ValueError."""
     with pytest.raises(ValueError, match="Invalid sense"):
         solve_bigm([1], [[1]], [5], ["=="])
     with pytest.raises(ValueError, match="Length mismatch"):
         solve_bigm([1], [[1], [2]], [5], ["<="])
     with pytest.raises(ValueError, match="expected 1"):
         solve_twophase([1], [[1, 2]], [5], ["<="])
+    with pytest.raises(ValueError, match="finite number"):
+        solve_bigm([float("nan")], [[1]], [5], ["<="])
+    with pytest.raises(ValueError, match="finite number"):
+        solve_bigm([1], [[float("inf")]], [5], ["<="])
 
 
 def test_iteration_limit():
-    """Tableau.solve returns 'iteration_limit' when max_iters is exhausted."""
-    tab = Tableau(["x1"], ["x1"], [[1.0, 1.0]], [-1.0, 0.0], [0.0, 0.0])
+    """Solvers raise RuntimeError when iteration limit is exhausted on a multi-step LP."""
+    from solvers.simplex import Tableau
+    # Simple tableau that takes at least 1 pivot, executed with max_iters=0
+    tab = Tableau(["x1", "s1"], ["s1"], [[1.0, 1.0, 5.0]], [-2.0, 0.0, 0.0], [0.0, 0.0, 0.0])
     status = tab.solve(max_iters=0)
     assert status == "iteration_limit"

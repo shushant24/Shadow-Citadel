@@ -110,8 +110,6 @@ def solve_twophase(c, A, b, senses, maximize=True):
     if status_p1 == "iteration_limit":
         raise RuntimeError("Simplex iteration limit reached in Phase 1.")
 
-    steps = list(tableau_p1.steps)
-
     # Check Phase 1 result
     if status_p1 == "optimal":
         p1_obj = tableau_p1.zrow_c[-1]
@@ -119,13 +117,14 @@ def solve_twophase(c, A, b, senses, maximize=True):
             return envelope("infeasible",
                             message="Phase 1 ended with a positive sum of artificials: "
                                     "the constraints are infeasible.",
-                            steps=steps)
+                            steps=list(tableau_p1.steps))
     elif status_p1 == "unbounded":
         return envelope("infeasible",
                         message="Phase 1 is unbounded (should not happen).",
-                        steps=steps)
+                        steps=list(tableau_p1.steps))
 
     # Drive any artificial variables remaining in the basis at level 0 out of the basis
+    # and record any drive-out pivots into the step trace
     art_names = {name for name, _ in artificial_cols}
     for i in range(tableau_p1.n_rows):
         if tableau_p1.basis[i] in art_names:
@@ -134,8 +133,10 @@ def solve_twophase(c, A, b, senses, maximize=True):
                 col_name = tableau_p1.columns[j]
                 if col_name not in art_names and col_name not in tableau_p1.basis:
                     if abs(tableau_p1.tab[i][j]) > 1e-10:
-                        tableau_p1.pivot(i, j)
+                        tableau_p1.pivot_recorded(i, j)
                         break
+
+    steps = list(tableau_p1.steps)
 
     # ================================================================ Phase 2
     sign = 1.0 if maximize else -1.0
@@ -191,7 +192,7 @@ def solve_twophase(c, A, b, senses, maximize=True):
         z = _round_val(sign * tableau_p2.zrow_c[-1])
         return envelope("optimal", answer={"x": x, "z": z}, steps=steps)
 
-    return envelope("infeasible", message="Solver did not converge.", steps=steps)
+    raise RuntimeError(f"Unexpected solver status: {status_p2}")
 
 
 def _round_val(v: float, tol: float = 1e-9) -> float:
