@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 
 const RECIPE_ITEMS = [
   { id: "x1", name: "x1 Health potion" },
@@ -16,54 +16,78 @@ const RECIPE_ATTRS = [
 ];
 
 /**
+ * Reusable numeric input with internal draft string state.
+ * Allows users to freely backspace, clear, and retype values without the input
+ * immediately snapping back on invalid keystrokes.
+ * Validates and commits on blur or Enter; reverts to last valid value if invalid.
+ */
+function NumberField({
+  id,
+  label,
+  value,
+  min = 0,
+  integer = false,
+  onChange,
+  className = "form-input num-input",
+}) {
+  const [draft, setDraft] = useState(String(value ?? ""));
+
+  useEffect(() => {
+    setDraft(String(value ?? ""));
+  }, [value]);
+
+  const commit = () => {
+    const raw = String(draft).trim();
+    if (raw === "") {
+      setDraft(String(value ?? ""));
+      return;
+    }
+    const num = Number(raw);
+    if (!Number.isFinite(num) || num < min) {
+      setDraft(String(value ?? ""));
+      return;
+    }
+    const val = integer ? Math.floor(num) : num;
+    if (val !== value) {
+      onChange?.(val);
+    }
+    setDraft(String(val));
+  };
+
+  return (
+    <input
+      id={id}
+      aria-label={label}
+      type="number"
+      min={min}
+      step={integer ? "1" : "any"}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          commit();
+          e.currentTarget.blur();
+        }
+      }}
+      className={className}
+    />
+  );
+}
+
+/**
  * Scenario editor panel (Part 6).
  * Allows live editing of raid time limit, crafting limits, and item recipes.
  * Propagates updates via onChange(nextScenario).
- *
- * Uses a draft-string approach for total_time so users can freely backspace,
- * clear, and retype values without the input snapping back on every keystroke.
- * Values are committed on blur or Enter.
  */
 export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = false }) {
   const [showRaw, setShowRaw] = useState(false);
-  // Draft string for total_time — allows free typing; commits on blur/Enter
-  const [timeDraft, setTimeDraft] = useState(String(scenario?.total_time ?? ""));
 
-  // Keep draft in sync when scenario.total_time changes externally (e.g. reset)
-  useEffect(() => {
-    setTimeDraft(String(scenario?.total_time ?? ""));
-  }, [scenario?.total_time]);
-
+  // Early return when scenario is null (placed after the sole useState hook,
+  // ensuring identical hook count across all renders to obey Rules of Hooks)
   if (!scenario) return null;
 
-  const commitTotalTime = useCallback(() => {
-    const raw = timeDraft.trim();
-    if (raw === "") {
-      // Revert to current value
-      setTimeDraft(String(scenario?.total_time ?? ""));
-      return;
-    }
-    const num = Number(raw);
-    if (!Number.isFinite(num) || num < 1) {
-      setTimeDraft(String(scenario?.total_time ?? ""));
-      return;
-    }
-    const val = Math.floor(num);
-    if (val !== scenario?.total_time) {
-      onChange?.({
-        ...scenario,
-        total_time: val,
-      });
-    }
-    setTimeDraft(String(val));
-  }, [timeDraft, scenario, onChange]);
-
-  const handleLimitChange = (key, rawValue, min = 0, isInt = false) => {
-    const raw = String(rawValue).trim();
-    if (raw === "") return;
-    const num = Number(raw);
-    if (!Number.isFinite(num) || num < min) return;
-    const val = isInt ? Math.floor(num) : num;
+  const handleLimitChange = (key, val) => {
     onChange?.({
       ...scenario,
       limits: {
@@ -73,12 +97,7 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
     });
   };
 
-  const handleRecipeChange = (attr, itemIndex, rawValue, min = 0, isInt = false) => {
-    const raw = String(rawValue).trim();
-    if (raw === "") return;
-    const num = Number(raw);
-    if (!Number.isFinite(num) || num < min) return;
-    const val = isInt ? Math.floor(num) : num;
+  const handleRecipeChange = (attr, itemIndex, val) => {
     const currentList = scenario.recipes?.[attr] || [];
     const nextList = [...currentList];
     nextList[itemIndex] = val;
@@ -125,18 +144,18 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
             <label htmlFor="input-total-time">
               Raid Time Limit (min):
             </label>
-            <input
+            <NumberField
               id="input-total-time"
-              type="number"
-              min="1"
-              step="1"
-              value={timeDraft}
-              onChange={(e) => setTimeDraft(e.target.value)}
-              onBlur={commitTotalTime}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commitTotalTime();
-              }}
-              className="form-input num-input"
+              label="Raid Time Limit"
+              value={scenario.total_time}
+              min={1}
+              integer={true}
+              onChange={(val) =>
+                onChange?.({
+                  ...scenario,
+                  total_time: val,
+                })
+              }
             />
           </div>
         </section>
@@ -147,47 +166,46 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
           <div className="limits-grid">
             <div className="form-group">
               <label htmlFor="limit-weight">Max Weight (kg, ≤):</label>
-              <input
+              <NumberField
                 id="limit-weight"
-                type="number"
-                min="0"
-                value={scenario.limits?.weight ?? ""}
-                onChange={(e) => handleLimitChange("weight", e.target.value, 0, false)}
-                className="form-input num-input"
+                label="Max Weight"
+                value={scenario.limits?.weight}
+                min={0}
+                integer={false}
+                onChange={(val) => handleLimitChange("weight", val)}
               />
             </div>
             <div className="form-group">
               <label htmlFor="limit-stamina">Max Stamina Cost (≤):</label>
-              <input
+              <NumberField
                 id="limit-stamina"
-                type="number"
-                min="0"
-                value={scenario.limits?.stamina ?? ""}
-                onChange={(e) => handleLimitChange("stamina", e.target.value, 0, false)}
-                className="form-input num-input"
+                label="Max Stamina"
+                value={scenario.limits?.stamina}
+                min={0}
+                integer={false}
+                onChange={(val) => handleLimitChange("stamina", val)}
               />
             </div>
             <div className="form-group">
               <label htmlFor="limit-survival">Min Survival Points (≥):</label>
-              <input
+              <NumberField
                 id="limit-survival"
-                type="number"
-                min="0"
-                value={scenario.limits?.survival_min ?? ""}
-                onChange={(e) => handleLimitChange("survival_min", e.target.value, 0, false)}
-                className="form-input num-input"
+                label="Min Survival"
+                value={scenario.limits?.survival_min}
+                min={0}
+                integer={false}
+                onChange={(val) => handleLimitChange("survival_min", val)}
               />
             </div>
             <div className="form-group">
               <label htmlFor="limit-slots">Required Slots (=):</label>
-              <input
+              <NumberField
                 id="limit-slots"
-                type="number"
-                min="1"
-                step="1"
-                value={scenario.limits?.slots ?? ""}
-                onChange={(e) => handleLimitChange("slots", e.target.value, 1, true)}
-                className="form-input num-input"
+                label="Required Slots"
+                value={scenario.limits?.slots}
+                min={1}
+                integer={true}
+                onChange={(val) => handleLimitChange("slots", val)}
               />
             </div>
           </div>
@@ -211,20 +229,17 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
                   <tr key={item.id}>
                     <td className="item-name">{item.name}</td>
                     {RECIPE_ATTRS.map((a) => {
-                      const val = scenario.recipes?.[a.key]?.[idx] ?? "";
+                      const val = scenario.recipes?.[a.key]?.[idx] ?? 0;
                       const inputId = `recipe-${item.id}-${a.key}`;
                       return (
                         <td key={a.key}>
-                          <input
+                          <NumberField
                             id={inputId}
-                            aria-label={`${item.name} ${a.label}`}
-                            type="number"
-                            min={a.min}
-                            step={a.integer ? "1" : "any"}
+                            label={`${item.name} ${a.label}`}
                             value={val}
-                            onChange={(e) =>
-                              handleRecipeChange(a.key, idx, e.target.value, a.min, a.integer)
-                            }
+                            min={a.min}
+                            integer={a.integer}
+                            onChange={(newVal) => handleRecipeChange(a.key, idx, newVal)}
                             className="form-input num-input table-input"
                           />
                         </td>

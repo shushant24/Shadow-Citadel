@@ -26,6 +26,16 @@ describe("ScenarioPanel component", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  test("re-rendering from scenario=null to scenario=fixture does not violate rules of hooks", () => {
+    const { container, rerender } = render(<ScenarioPanel scenario={null} onChange={vi.fn()} />);
+    expect(container.firstChild).toBeNull();
+
+    // Rerender with valid scenario — must not throw "Rendered more hooks" error
+    rerender(<ScenarioPanel scenario={scenarioFixture} onChange={vi.fn()} />);
+    expect(screen.getByText(/Scenario \(8 nodes, 4 loot drops\)/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Raid Time Limit/i)).toHaveValue(120);
+  });
+
   test("editing raid time limit calls onChange on blur and preserves nodes, loot, and weapon scores", () => {
     const handleChange = vi.fn();
     const clonedFixture = structuredClone(scenarioFixture);
@@ -78,26 +88,30 @@ describe("ScenarioPanel component", () => {
     expect(handleChange).not.toHaveBeenCalled();
   });
 
-  test("editing limits calls onChange with updated limits", () => {
+  test("editing limits calls onChange with updated limits on blur", () => {
     const handleChange = vi.fn();
     render(<ScenarioPanel scenario={scenarioFixture} onChange={handleChange} />);
 
     const weightInput = screen.getByLabelText(/Max Weight/i);
     fireEvent.change(weightInput, { target: { value: "45" } });
+    expect(handleChange).not.toHaveBeenCalled();
 
+    fireEvent.blur(weightInput);
     expect(handleChange).toHaveBeenCalledTimes(1);
     const updated = handleChange.mock.calls[0][0];
     expect(updated.limits.weight).toBe(45);
     expect(updated.limits.stamina).toBe(90);
   });
 
-  test("editing a recipe cell calls onChange with updated recipe matrix", () => {
+  test("editing a recipe cell calls onChange with updated recipe matrix on Enter", () => {
     const handleChange = vi.fn();
     render(<ScenarioPanel scenario={scenarioFixture} onChange={handleChange} />);
 
     const healthScoreInput = screen.getByLabelText("x1 Health potion Score / unit");
     fireEvent.change(healthScoreInput, { target: { value: "12" } });
+    expect(handleChange).not.toHaveBeenCalled();
 
+    fireEvent.keyDown(healthScoreInput, { key: "Enter" });
     expect(handleChange).toHaveBeenCalledTimes(1);
     const updated = handleChange.mock.calls[0][0];
     expect(updated.recipes.score[0]).toBe(12);
