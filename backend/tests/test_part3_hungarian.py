@@ -1,6 +1,6 @@
 import itertools
 
-from conftest import check_contract, check_envelope, pending
+from conftest import check_contract, check_envelope
 from solvers.hungarian import solve_assignment
 
 
