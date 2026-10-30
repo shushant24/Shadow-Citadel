@@ -19,7 +19,6 @@ def test_shadow_prices_for_50_minutes(scenario):
     assert prices.get("survival", 0) == pytest.approx(0)
 
 
-@pending
 def test_42_minutes_scores_111(scenario):
     result = solve_bigm(*crafting_lp(scenario, 42), maximize=True)
     assert result["answer"]["z"] == pytest.approx(111)
