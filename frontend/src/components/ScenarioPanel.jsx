@@ -66,8 +66,11 @@ function NumberField({
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
-          commit();
-          e.currentTarget.blur();
+          if (document.activeElement === e.currentTarget) {
+            e.currentTarget.blur();
+          } else {
+            commit();
+          }
         }
       }}
       className={className}
@@ -229,7 +232,7 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
                   <tr key={item.id}>
                     <td className="item-name">{item.name}</td>
                     {RECIPE_ATTRS.map((a) => {
-                      const val = scenario.recipes?.[a.key]?.[idx] ?? 0;
+                      const val = scenario.recipes?.[a.key]?.[idx];
                       const inputId = `recipe-${item.id}-${a.key}`;
                       return (
                         <td key={a.key}>

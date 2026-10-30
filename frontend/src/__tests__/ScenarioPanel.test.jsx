@@ -103,11 +103,12 @@ describe("ScenarioPanel component", () => {
     expect(updated.limits.stamina).toBe(90);
   });
 
-  test("editing a recipe cell calls onChange with updated recipe matrix on Enter", () => {
+  test("editing a recipe cell calls onChange with updated recipe matrix on Enter (single commit)", () => {
     const handleChange = vi.fn();
     render(<ScenarioPanel scenario={scenarioFixture} onChange={handleChange} />);
 
     const healthScoreInput = screen.getByLabelText("x1 Health potion Score / unit");
+    healthScoreInput.focus();
     fireEvent.change(healthScoreInput, { target: { value: "12" } });
     expect(handleChange).not.toHaveBeenCalled();
 
@@ -116,6 +117,38 @@ describe("ScenarioPanel component", () => {
     const updated = handleChange.mock.calls[0][0];
     expect(updated.recipes.score[0]).toBe(12);
     expect(updated.recipes.score[1]).toBe(scenarioFixture.recipes.score[1]);
+  });
+
+  test("limits revert invalid or empty inputs on blur without calling onChange", () => {
+    const handleChange = vi.fn();
+    render(<ScenarioPanel scenario={scenarioFixture} onChange={handleChange} />);
+
+    const staminaInput = screen.getByLabelText(/Max Stamina/i);
+
+    // Empty input typed, then blur → reverts, no onChange
+    fireEvent.change(staminaInput, { target: { value: "" } });
+    fireEvent.blur(staminaInput);
+    expect(handleChange).not.toHaveBeenCalled();
+    expect(staminaInput).toHaveValue(90);
+
+    // Negative input typed, then blur → reverts, no onChange
+    fireEvent.change(staminaInput, { target: { value: "-5" } });
+    fireEvent.blur(staminaInput);
+    expect(handleChange).not.toHaveBeenCalled();
+    expect(staminaInput).toHaveValue(90);
+  });
+
+  test("missing recipe cell renders as empty input rather than defaulting to 0", () => {
+    const sparseScenario = {
+      ...scenarioFixture,
+      recipes: {
+        ...scenarioFixture.recipes,
+        score: [undefined, 6, 10, 7],
+      },
+    };
+    render(<ScenarioPanel scenario={sparseScenario} onChange={vi.fn()} />);
+    const healthScoreInput = screen.getByLabelText("x1 Health potion Score / unit");
+    expect(healthScoreInput.value).toBe("");
   });
 
   test("reset button is disabled when not edited, and calls onReset when modified", () => {
