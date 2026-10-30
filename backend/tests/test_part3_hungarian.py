@@ -109,3 +109,22 @@ def test_api_assign_dimension_caps_and_validation():
     res = post_assign(req)
     assert res["status"] == "optimal"
     assert res["answer"]["total"] == 20
+
+
+def test_exact_fraction_arithmetic_handles_close_gaps_and_mixed_scales():
+    """Exact rational arithmetic distinguishes small gaps at large scales and mixed scales."""
+    # Near gap at 1e12 scale
+    res1 = solve_assignment([[1e12, 1e12 - 3], [1e12 - 3, 1e12]], maximize=True)
+    assert sorted(map(tuple, res1["answer"]["pairs"])) == [(1, 1), (2, 2)]
+    assert res1["answer"]["total"] == 2000000000000
+
+    # Near gap in minimize mode
+    res2 = solve_assignment([[1e9, 1e9 + 0.005], [1e9 + 0.005, 1e9]], maximize=False)
+    assert sorted(map(tuple, res2["answer"]["pairs"])) == [(1, 1), (2, 2)]
+    assert res2["answer"]["total"] == pytest.approx(2000000000.0)
+
+    # Mixed scales: 1e6 and 1e-5
+    res3 = solve_assignment([[1e6, 1e-5], [1e-5, 1e6]], maximize=True)
+    assert sorted(map(tuple, res3["answer"]["pairs"])) == [(1, 1), (2, 2)]
+    assert res3["answer"]["total"] == pytest.approx(2000000.0)
+

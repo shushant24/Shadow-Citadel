@@ -8,49 +8,44 @@ dummy_cols and unassigned lists are 1-based.
 from __future__ import annotations
 
 import math
+from fractions import Fraction
 from numbers import Real
 from typing import Any, Sequence
 
 from envelope import envelope
 
-_DEFAULT_EPS = 1e-9
 MAX_SCORE_MAGNITUDE = 1e12
-Matrix = list[list[float]]
+Matrix = list[list[Fraction]]
 
 
 class AssignmentError(ValueError):
     """Raised when an assignment matrix or option is invalid."""
 
 
-def _number(value: float, eps: float = _DEFAULT_EPS) -> int | float:
-    """Avoid emitting values such as 2.0 when the result is integral, while preserving small floats."""
-    if float(value).is_integer():
-        return int(value)
-    nearest = round(value)
-    if nearest == 0:
-        if abs(value) <= eps:
-            return 0
-        return float(value)
-    if abs(value - nearest) <= eps:
-        return int(nearest)
-    return float(value)
+def _number(value: Fraction | float | int) -> int | float:
+    """Avoid emitting values such as 2.0 when the result is integral, while preserving floats."""
+    if isinstance(value, Fraction):
+        if value.denominator == 1:
+            return int(value.numerator)
+        f = float(value)
+        return int(f) if f.is_integer() else f
+    if isinstance(value, int):
+        return value
+    f = float(value)
+    return int(f) if f.is_integer() else f
 
 
-def _matrix_numbers(matrix: Matrix, eps: float = _DEFAULT_EPS) -> list[list[int | float]]:
-    return [[_number(value, eps) for value in row] for row in matrix]
+def _matrix_numbers(matrix: Matrix) -> list[list[int | float]]:
+    return [[_number(value) for value in row] for row in matrix]
 
 
-def _is_zero(value: float, eps: float = _DEFAULT_EPS) -> bool:
-    return abs(value) <= eps
-
-
-def _validate(scores: Sequence[Sequence[Real]], maximize: bool) -> Matrix:
+def _validate(scores: Sequence[Sequence[Real]], maximize: bool) -> list[list[Fraction]]:
     if not isinstance(maximize, bool):
         raise AssignmentError("maximize must be a boolean.")
     if isinstance(scores, (str, bytes)) or not isinstance(scores, Sequence) or len(scores) == 0:
         raise AssignmentError("scores must be a non-empty rectangular matrix.")
 
-    result: Matrix = []
+    result: list[list[Fraction]] = []
     width: int | None = None
     for ri, row in enumerate(scores, start=1):
         if isinstance(row, (str, bytes)) or not isinstance(row, Sequence) or len(row) == 0:
@@ -60,7 +55,7 @@ def _validate(scores: Sequence[Sequence[Real]], maximize: bool) -> Matrix:
         elif len(row) != width:
             raise AssignmentError("scores must be rectangular: every row needs the same number of columns.")
 
-        values: list[float] = []
+        values: list[Fraction] = []
         for ci, value in enumerate(row, start=1):
             if isinstance(value, bool) or not isinstance(value, Real):
                 raise AssignmentError(f"scores[{ri}][{ci}] must be a finite number.")
@@ -71,19 +66,19 @@ def _validate(scores: Sequence[Sequence[Real]], maximize: bool) -> Matrix:
                 raise AssignmentError(
                     f"scores[{ri}][{ci}] magnitude {numeric} exceeds maximum allowed {MAX_SCORE_MAGNITUDE}."
                 )
-            values.append(numeric)
+            values.append(Fraction(numeric))
         result.append(values)
     return result
 
 
-def _maximum_zero_matching(matrix: Matrix, eps: float = _DEFAULT_EPS) -> list[tuple[int, int]]:
+def _maximum_zero_matching(matrix: Matrix) -> list[tuple[int, int]]:
     """Find a maximum independent set of zero cells with deterministic DFS."""
     size = len(matrix)
     col_to_row = [-1] * size
 
     def augment(row: int, visited_cols: list[bool]) -> bool:
         for col in range(size):
-            if visited_cols[col] or not _is_zero(matrix[row][col], eps):
+            if visited_cols[col] or matrix[row][col] != 0:
                 continue
             visited_cols[col] = True
             prior_row = col_to_row[col]
@@ -98,7 +93,7 @@ def _maximum_zero_matching(matrix: Matrix, eps: float = _DEFAULT_EPS) -> list[tu
 
 
 def _minimum_line_cover(
-    matrix: Matrix, matching: list[tuple[int, int]], eps: float = _DEFAULT_EPS
+    matrix: Matrix, matching: list[tuple[int, int]]
 ) -> tuple[list[int], list[int]]:
     """Return Konig's minimum zero-cover as zero-based row/column indexes."""
     size = len(matrix)
@@ -116,7 +111,7 @@ def _minimum_line_cover(
         if kind == "row":
             matched_col = row_to_col.get(index)
             for col in range(size):
-                if col == matched_col or not _is_zero(matrix[index][col], eps):
+                if col == matched_col or matrix[index][col] != 0:
                     continue
                 if col not in reachable_cols:
                     reachable_cols.add(col)
@@ -145,20 +140,16 @@ def solve_assignment(scores: Sequence[Sequence[Real]], maximize: bool = True) ->
     dummy_rows = list(range(row_count + 1, size + 1))
     dummy_cols = list(range(col_count + 1, size + 1))
 
-    # Scale tolerance by largest absolute entry to handle small-scale scores accurately
-    max_abs = max((abs(value) for row in original for value in row), default=1.0)
-    eps = max(1e-11 * max_abs, 1e-15)
-
     # The assignment objective is unchanged if dummy cells have zero transformed
     # cost: the number of dummy matches is fixed by the matrix shape. This also
     # matches the repository's reference fixtures.
-    working: Matrix = [[0.0 for _ in range(size)] for _ in range(size)]
+    working: Matrix = [[Fraction(0) for _ in range(size)] for _ in range(size)]
     if maximize:
         p_max = max(value for row in original for value in row)
         for ri in range(row_count):
             for ci in range(col_count):
                 working[ri][ci] = p_max - original[ri][ci]
-        note = f"c_ij = P_max - p_ij with P_max = {_number(p_max, eps)}"
+        note = f"c_ij = P_max - p_ij with P_max = {_number(p_max)}"
     else:
         for ri in range(row_count):
             for ci in range(col_count):
@@ -180,7 +171,7 @@ def solve_assignment(scores: Sequence[Sequence[Real]], maximize: bool = True) ->
     ) -> None:
         item: dict[str, Any] = {
             "phase": phase,
-            "matrix": _matrix_numbers(working, eps),
+            "matrix": _matrix_numbers(working),
             "covered_rows": [i + 1 for i in covered_rows],
             "covered_cols": [i + 1 for i in covered_cols],
             "dummy_rows": dummy_rows[:],
@@ -198,15 +189,12 @@ def solve_assignment(scores: Sequence[Sequence[Real]], maximize: bool = True) ->
     for ri in range(size):
         minimum = min(working[ri])
         working[ri] = [value - minimum for value in working[ri]]
-        working[ri] = [0.0 if _is_zero(value, eps) else value for value in working[ri]]
     add_step("row_reduce", "Subtract the minimum of each row from every value in that row.")
 
     for ci in range(size):
         minimum = min(working[ri][ci] for ri in range(size))
         for ri in range(size):
             working[ri][ci] -= minimum
-            if _is_zero(working[ri][ci], eps):
-                working[ri][ci] = 0.0
     add_step("col_reduce", "Subtract the minimum of each column from every value in that column.")
 
     # Cover zeros with a minimum number of lines. If fewer than N lines are
@@ -215,8 +203,8 @@ def solve_assignment(scores: Sequence[Sequence[Real]], maximize: bool = True) ->
     max_iterations = max(100, size * size * size * 10)
     selected: list[tuple[int, int]] = []
     for iteration in range(max_iterations):
-        selected = _maximum_zero_matching(working, eps)
-        covered_rows, covered_cols = _minimum_line_cover(working, selected, eps)
+        selected = _maximum_zero_matching(working)
+        covered_rows, covered_cols = _minimum_line_cover(working, selected)
         line_count = len(covered_rows) + len(covered_cols)
         add_step(
             "cover",
@@ -239,9 +227,7 @@ def solve_assignment(scores: Sequence[Sequence[Real]], maximize: bool = True) ->
         if not uncovered:
             raise RuntimeError("Hungarian adjustment failed: no uncovered cells remain.")
         delta = min(uncovered)
-        if delta < -eps:
-            raise RuntimeError("Hungarian adjustment encountered a negative uncovered value.")
-        if _is_zero(delta, eps):
+        if delta <= 0:
             raise RuntimeError("Hungarian adjustment found an uncovered zero; the zero cover is inconsistent.")
 
         # Subtract delta from uncovered cells and add delta at intersections of
@@ -252,15 +238,13 @@ def solve_assignment(scores: Sequence[Sequence[Real]], maximize: bool = True) ->
                     working[ri][ci] -= delta
                 elif ri in row_set and ci in col_set:
                     working[ri][ci] += delta
-                if _is_zero(working[ri][ci], eps):
-                    working[ri][ci] = 0.0
 
         add_step(
             "adjust",
             "Subtract delta from uncovered cells and add it at intersections of two covering lines.",
             covered_rows=covered_rows,
             covered_cols=covered_cols,
-            extra={"delta": _number(delta, eps)},
+            extra={"delta": _number(delta)},
         )
     else:
         raise RuntimeError("Hungarian solver exceeded its iteration safety limit.")
@@ -278,7 +262,7 @@ def solve_assignment(scores: Sequence[Sequence[Real]], maximize: bool = True) ->
 
     answer = {
         "pairs": [[ri + 1, ci + 1] for ri, ci in real_pairs],
-        "total": _number(total, eps),
+        "total": _number(total),
         "unassigned": {
             "rows": [ri + 1 for ri in range(row_count) if ri not in assigned_rows],
             "cols": [ci + 1 for ci in range(col_count) if ci not in assigned_cols],
