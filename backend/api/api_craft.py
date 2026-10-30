@@ -10,11 +10,12 @@ from pydantic import BaseModel, field_validator
 from envelope import envelope
 from solvers.bigm import solve_bigm
 from solvers.twophase import solve_twophase
-from solvers.sensitivity import bottleneck_text, shadow_prices
+from solvers.sensitivity import binding_constraints, bottleneck_text, shadow_prices
 
 router = APIRouter()
 
 CONSTRAINT_NAMES = ["time", "weight", "stamina", "survival", "slots"]
+MAX_RECIPES = 50
 
 
 class CraftRequest(BaseModel):
@@ -28,6 +29,8 @@ class CraftRequest(BaseModel):
     def check_time_limit(cls, v: float) -> float:
         if not math.isfinite(v):
             raise ValueError("time_limit must be a finite number.")
+        if v < 0:
+            raise ValueError("time_limit cannot be negative.")
         return v
 
     @field_validator("recipes")
@@ -43,6 +46,8 @@ class CraftRequest(BaseModel):
         n = next(iter(lengths.values()))
         if n == 0:
             raise ValueError("recipes lists must be non-empty.")
+        if n > MAX_RECIPES:
+            raise ValueError(f"recipes cannot contain more than {MAX_RECIPES} items.")
         for key in required:
             for i, val in enumerate(v[key]):
                 if not isinstance(val, (int, float)) or isinstance(val, bool) or not math.isfinite(val):
@@ -88,11 +93,11 @@ def post_craft(req: CraftRequest) -> dict:
 
     senses = ["<=", "<=", "<=", ">=", "="]
 
-    # 3. Solve via Part 1 solver
+    # 3. Solve via Part 1 solver (only map ValueError to 422; let RuntimeError produce 500)
     solver = solve_twophase if req.method == "twophase" else solve_bigm
     try:
         res = solver(c, A, b, senses, maximize=True)
-    except (ValueError, RuntimeError) as exc:
+    except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # 4. If infeasible or unbounded, return solver envelope directly
@@ -105,7 +110,7 @@ def post_craft(req: CraftRequest) -> dict:
 
     # Contract requires time, weight, slots always present in shadow_prices
     sp_output = {name: sp_all.get(name, 0.0) for name in CONSTRAINT_NAMES}
-    binding = [name for name in CONSTRAINT_NAMES if abs(sp_all.get(name, 0.0)) > 1e-6]
+    binding = binding_constraints(final_step, CONSTRAINT_NAMES)
     b_text = bottleneck_text(sp_all)
 
     answer = dict(res["answer"])

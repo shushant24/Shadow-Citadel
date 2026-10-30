@@ -9,17 +9,22 @@ e<i> (surplus, >=) and/or a<i> (artificial, = and >=). The row `zrow["c"]` holds
 from __future__ import annotations
 
 
-def _identify_column_for_constraint(i_1based: int, columns: list[str]) -> str | None:
-    """Find column name for constraint i (slack s<i>, artificial a<i>, or surplus e<i>)."""
+def _identify_column_for_constraint(i_1based: int, columns: list[str]) -> tuple[str, float] | None:
+    """Find (column_name, sign) for constraint i.
+
+    For slack s<i> (<= constraint): column represents +B^-1 u_i, reduced cost is y_i (sign +1).
+    For artificial a<i> (equality or >= constraint): column represents +B^-1 u_i, reduced cost is y_i (sign +1).
+    For surplus e<i> (>= constraint): column represents -B^-1 u_i, reduced cost is -y_i (sign -1).
+    """
     s_col = f"s{i_1based}"
     if s_col in columns:
-        return s_col
+        return (s_col, 1.0)
     a_col = f"a{i_1based}"
     if a_col in columns:
-        return a_col
+        return (a_col, 1.0)
     e_col = f"e{i_1based}"
     if e_col in columns:
-        return e_col
+        return (e_col, -1.0)
     return None
 
 
@@ -34,10 +39,11 @@ def shadow_prices(final_step: dict, constraint_names: list[str]) -> dict[str, fl
 
     prices = {}
     for i, name in enumerate(constraint_names, start=1):
-        col_name = _identify_column_for_constraint(i, columns)
-        if col_name and col_name in columns:
+        col_info = _identify_column_for_constraint(i, columns)
+        if col_info:
+            col_name, sign = col_info
             idx = columns.index(col_name)
-            val = zrow_c[idx]
+            val = zrow_c[idx] * sign
             price = round(val, 4) if abs(val) > 1e-6 else 0.0
             prices[name] = price
         else:
@@ -50,14 +56,14 @@ def rhs_ranging(
     final_step: dict,
     constraint_names: list[str],
     current_rhs: dict[str, float],
-) -> dict[str, tuple[float, float]]:
+) -> dict[str, tuple[float | None, float | None]]:
     """Return {constraint_name: (lowest_rhs, highest_rhs)} over which the shadow price stays valid.
 
     Feasibility condition for basis B with change Δb:
         x_B + Δb * d >= 0  ==>  Δb * d_i >= -x_{B,i}
 
-    ``current_rhs`` is required and must match the right-hand sides actually used
-    in the solved problem.
+    ``current_rhs`` is required and must contain all constraint names in ``constraint_names``.
+    Unbounded limits return None (e.g. (57.0, None) instead of inf) for clean JSON serialization.
     """
     columns: list[str] = final_step["columns"]
     basis: list[str] = final_step["basis"]
@@ -67,34 +73,39 @@ def rhs_ranging(
     ranges = {}
 
     for i, name in enumerate(constraint_names, start=1):
-        b_k = current_rhs.get(name, 0.0)
+        if name not in current_rhs:
+            raise KeyError(f"current_rhs missing constraint name '{name}'")
+        b_k = current_rhs[name]
         s_col = f"s{i}"
         e_col = f"e{i}"
 
-        # If slack or surplus is currently in basis, constraint has surplus slack
+        # If slack or surplus is currently in basis with positive value, constraint has surplus slack
         if s_col in basis:
             row_idx = basis.index(s_col)
             slack_val = tableau[row_idx][-1]
-            ranges[name] = (round(b_k - slack_val, 2), float("inf"))
-            continue
-        elif e_col in basis:
+            if slack_val > 1e-6:
+                ranges[name] = (round(b_k - slack_val, 2), None)
+                continue
+        if e_col in basis:
             row_idx = basis.index(e_col)
             surplus_val = tableau[row_idx][-1]
-            ranges[name] = (float("-inf"), round(b_k + surplus_val, 2))
-            continue
+            if surplus_val > 1e-6:
+                ranges[name] = (None, round(b_k + surplus_val, 2))
+                continue
 
-        # Binding constraint: read column of B^{-1} from slack or artificial column
-        col_name = _identify_column_for_constraint(i, columns)
-        if not col_name:
+        # Binding constraint: read column of B^{-1} from slack, artificial, or surplus
+        col_info = _identify_column_for_constraint(i, columns)
+        if not col_info:
             ranges[name] = (b_k, b_k)
             continue
 
+        col_name, sign = col_info
         c_idx = columns.index(col_name)
         min_delta = float("-inf")
         max_delta = float("inf")
 
         for r in range(m_rows):
-            d_r = tableau[r][c_idx]
+            d_r = tableau[r][c_idx] * sign
             x_r = tableau[r][-1]
 
             if d_r > 1e-9:
@@ -102,11 +113,41 @@ def rhs_ranging(
             elif d_r < -1e-9:
                 max_delta = min(max_delta, -x_r / d_r)
 
-        lower = round(b_k + min_delta, 2) if min_delta != float("-inf") else float("-inf")
-        upper = round(b_k + max_delta, 2) if max_delta != float("inf") else float("inf")
+        lower = round(b_k + min_delta, 2) if min_delta != float("-inf") else None
+        upper = round(b_k + max_delta, 2) if max_delta != float("inf") else None
         ranges[name] = (lower, upper)
 
     return ranges
+
+
+def binding_constraints(final_step: dict, constraint_names: list[str]) -> list[str]:
+    """Derive binding constraints from basis membership (slack or surplus nonbasic or zero)."""
+    columns: list[str] = final_step["columns"]
+    basis: list[str] = final_step["basis"]
+    tableau: list[list[float]] = final_step["tableau"]
+
+    binding = []
+    for i, name in enumerate(constraint_names, start=1):
+        s_col = f"s{i}"
+        e_col = f"e{i}"
+        if s_col in columns:
+            if s_col not in basis:
+                binding.append(name)
+            else:
+                row_idx = basis.index(s_col)
+                if abs(tableau[row_idx][-1]) <= 1e-6:
+                    binding.append(name)
+        elif e_col in columns:
+            if e_col not in basis:
+                binding.append(name)
+            else:
+                row_idx = basis.index(e_col)
+                if abs(tableau[row_idx][-1]) <= 1e-6:
+                    binding.append(name)
+        else:
+            # Equality constraint (has no slack or surplus column, always tight)
+            binding.append(name)
+    return binding
 
 
 def bottleneck_text(shadow_prices_by_constraint: dict[str, float]) -> str:
