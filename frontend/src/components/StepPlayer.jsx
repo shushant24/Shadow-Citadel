@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 
 const SPEED_PRESETS = [
   { label: "Fast", ms: 300 },
@@ -26,21 +26,38 @@ export default function StepPlayer({
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speedMs, setSpeedMs] = useState(initialSpeedMs);
+  const [speedDraft, setSpeedDraft] = useState(String(initialSpeedMs));
+  const controlsRef = useRef(null);
 
-  const totalSteps = steps.length;
+  const totalSteps = Array.isArray(steps) ? steps.length : 0;
   const last = Math.max(0, totalSteps - 1);
   const hasMultipleSteps = totalSteps > 1;
 
-  // Reset playback when steps list identity changes
-  useEffect(() => {
+  // Track steps identity to reset playback safely during render
+  const [prevSteps, setPrevSteps] = useState(steps);
+  let currentIndex = index;
+  if (steps !== prevSteps) {
+    setPrevSteps(steps);
     setIndex(0);
     setPlaying(false);
-  }, [steps]);
+    currentIndex = 0;
+  }
+
+  // Guard against out-of-bounds index if steps array shrinks
+  const safeIndex = totalSteps === 0 ? 0 : Math.min(Math.max(0, currentIndex), last);
+  if (index !== safeIndex && totalSteps > 0 && steps === prevSteps) {
+    setIndex(safeIndex);
+  }
+
+  // Keep draft speed in sync when speedMs is updated via presets
+  useEffect(() => {
+    setSpeedDraft(String(speedMs));
+  }, [speedMs]);
 
   // Handle auto-play timer loop
   useEffect(() => {
     if (!playing) return undefined;
-    if (index >= last) {
+    if (safeIndex >= last) {
       setPlaying(false);
       return undefined;
     }
@@ -48,7 +65,7 @@ export default function StepPlayer({
       setIndex((i) => Math.min(i + 1, last));
     }, speedMs);
     return () => clearTimeout(timerId);
-  }, [playing, index, last, speedMs]);
+  }, [playing, safeIndex, last, speedMs]);
 
   const handleFirst = useCallback(() => {
     setIndex(0);
@@ -61,14 +78,14 @@ export default function StepPlayer({
 
   const handleTogglePlay = useCallback(() => {
     if (!hasMultipleSteps) return;
-    if (index >= last) {
+    if (safeIndex >= last) {
       // Loop back to start if playing from the end
       setIndex(0);
       setPlaying(true);
     } else {
       setPlaying((p) => !p);
     }
-  }, [hasMultipleSteps, index, last]);
+  }, [hasMultipleSteps, safeIndex, last]);
 
   const handleNext = useCallback(() => {
     setIndex((i) => Math.min(i + 1, last));
@@ -79,10 +96,24 @@ export default function StepPlayer({
     setPlaying(false);
   }, [last]);
 
-  // Keyboard navigation support
+  // Keyboard navigation: scoped to player, ignores modifier keys and interactive children
   const handleKeyDown = useCallback(
     (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      // Don't intercept if modifier keys are pressed (e.g. Cmd+Left, Alt+Left)
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+
+      // Don't intercept if event originated inside interactive inputs/buttons
+      const target = e.target;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable ||
+        (target.tagName === "BUTTON" && (e.key === " " || e.code === "Space"))
+      ) {
+        return;
+      }
+
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         handlePrev();
@@ -103,11 +134,22 @@ export default function StepPlayer({
     [handlePrev, handleNext, handleTogglePlay, handleFirst, handleLast]
   );
 
+  const handleSpeedCommit = useCallback(() => {
+    const val = parseInt(speedDraft, 10);
+    if (!isNaN(val) && Number.isFinite(val)) {
+      const clamped = Math.max(100, Math.min(5000, val));
+      setSpeedMs(clamped);
+      setSpeedDraft(String(clamped));
+    } else {
+      setSpeedDraft(String(speedMs));
+    }
+  }, [speedDraft, speedMs]);
+
   if (totalSteps === 0) {
     return <p className="todo">No steps to replay.</p>;
   }
 
-  const currentStep = steps[index];
+  const currentStep = steps[safeIndex];
   const stepNote = currentStep?.note;
   const stepPhase = currentStep?.phase;
   const stepStatus = currentStep?.status;
@@ -116,18 +158,23 @@ export default function StepPlayer({
     <div
       className={`step-player ${className}`}
       onKeyDown={handleKeyDown}
-      tabIndex={0}
       role="region"
       aria-label="Step Player"
     >
       {/* Player Navigation Controls */}
-      <div className="step-controls" role="group" aria-label="Step playback controls">
+      <div
+        ref={controlsRef}
+        className="step-controls"
+        role="group"
+        aria-label="Step playback controls"
+        tabIndex={0}
+      >
         <div className="btn-group">
           <button
             type="button"
             className="btn btn-secondary"
             onClick={handleFirst}
-            disabled={index === 0}
+            disabled={safeIndex === 0}
             title="First step (Home)"
             aria-label="First step"
           >
@@ -137,7 +184,7 @@ export default function StepPlayer({
             type="button"
             className="btn btn-secondary"
             onClick={handlePrev}
-            disabled={index === 0}
+            disabled={safeIndex === 0}
             title="Previous step (Left Arrow)"
           >
             Back
@@ -155,7 +202,7 @@ export default function StepPlayer({
             type="button"
             className="btn btn-secondary"
             onClick={handleNext}
-            disabled={index === last}
+            disabled={safeIndex === last}
             title="Next step (Right Arrow)"
           >
             Next
@@ -164,7 +211,7 @@ export default function StepPlayer({
             type="button"
             className="btn btn-secondary"
             onClick={handleLast}
-            disabled={index === last}
+            disabled={safeIndex === last}
             title="Last step (End)"
             aria-label="Last step"
           >
@@ -173,7 +220,7 @@ export default function StepPlayer({
         </div>
 
         <span className="step-counter" aria-live="polite">
-          Step {index + 1} of {totalSteps}
+          Step {safeIndex + 1} of {totalSteps}
         </span>
 
         {/* Speed Controls */}
@@ -185,7 +232,10 @@ export default function StepPlayer({
                 key={p.label}
                 type="button"
                 className={`btn btn-xs ${speedMs === p.ms ? "btn-active" : "btn-secondary"}`}
-                onClick={() => setSpeedMs(p.ms)}
+                onClick={() => {
+                  setSpeedMs(p.ms);
+                  setSpeedDraft(String(p.ms));
+                }}
               >
                 {p.label}
               </button>
@@ -198,10 +248,16 @@ export default function StepPlayer({
               min="100"
               max="5000"
               step="100"
-              value={speedMs}
-              onChange={(e) => setSpeedMs(Math.max(100, Number(e.target.value) || initialSpeedMs))}
+              value={speedDraft}
+              onChange={(e) => setSpeedDraft(e.target.value)}
+              onBlur={handleSpeedCommit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSpeedCommit();
+                }
+              }}
               className="form-input num-input-sm"
-              title="Speed in milliseconds"
+              title="Speed in milliseconds (100 - 5000)"
             />
             <span className="unit">ms</span>
           </label>
@@ -215,7 +271,7 @@ export default function StepPlayer({
             type="range"
             min="0"
             max={last}
-            value={index}
+            value={safeIndex}
             onChange={(e) => setIndex(Number(e.target.value))}
             disabled={!hasMultipleSteps}
             className="step-scrubber"
@@ -235,7 +291,7 @@ export default function StepPlayer({
 
       {/* Render Active Step Content */}
       <div className="step-view" data-testid="step-content">
-        {children?.(currentStep, index)}
+        {children?.(currentStep, safeIndex)}
       </div>
     </div>
   );

@@ -25,7 +25,7 @@ export default function Status({ loading, error, result, children }) {
     return (
       <div className="status-error-container">
         <p className="error" role="alert">
-          <strong>Error:</strong> {error.message}
+          Error: {error.message}
         </p>
       </div>
     );
@@ -38,7 +38,7 @@ export default function Status({ loading, error, result, children }) {
       {notOptimal && (
         <div className="status-banner">
           <p className="warn" role="status">
-            <strong>{result.status === "infeasible" ? "Infeasible: " : "Unbounded: "}</strong>
+            {result.status === "infeasible" ? "Infeasible: " : "Unbounded: "}
             {result.answer?.message ?? "no message from the solver"}
           </p>
         </div>

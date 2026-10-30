@@ -496,9 +496,15 @@ body {
   margin-bottom: 20px;
 }
 
-.step-player:focus {
-  outline: none;
-  border-color: rgba(76, 201, 240, 0.5);
+.step-player:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.step-controls:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .step-controls {
@@ -552,6 +558,11 @@ body {
   outline: none;
   cursor: pointer;
   accent-color: var(--accent);
+}
+
+.step-scrubber:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .step-note-banner {

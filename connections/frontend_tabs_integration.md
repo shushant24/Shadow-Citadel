@@ -10,8 +10,8 @@ This document provides turnkey implementation blueprints for connecting **Part 7
 - **Props:** `{ scenario }` from `App.jsx`.
 - **Scenario Fields Used:** `scenario.nodes` (8 checkpoints) and `scenario.loot` (4 loot items).
 - **API Endpoints:**
-  - `api.hull({ ...scenario.nodes, ...scenario.loot })`
-  - `api.route({ points: scenario.nodes })` (or `api.route({ matrix, labels })`)
+  - `api.hull(points)`: takes a flat dictionary of `{ Base: [x,y], ... }` (which `api.js` wraps in `{ points }` for the backend).
+  - `api.route({ points })` (or `api.route({ matrix, labels })`).
 - **StepPlayer Target:** The 23-node Branch-and-Bound search tree from `routeData.steps`.
 
 ### 1.2 Copy-Paste Implementation Template for Part 7
@@ -25,16 +25,17 @@ import StepPlayer from "../components/StepPlayer.jsx";
 export default function MapTab({ scenario }) {
   const [useNearestNeighbour, setUseNearestNeighbour] = useState(false);
 
-  // Fetch convex hull vertices using all 12 points
+  // Fetch convex hull vertices using all 12 points (8 nodes + 4 loot drops).
+  // api.hull takes the flat points dictionary; api.js wraps it into { points } for the backend.
   const hullApi = useApi(
-    () => api.hull({ ...scenario.nodes, ...scenario.loot }),
-    [scenario]
+    () => api.hull({ ...(scenario?.nodes || {}), ...(scenario?.loot || {}) }),
+    [scenario?.nodes, scenario?.loot]
   );
 
   // Fetch TSP optimal tour and B&B steps
   const routeApi = useApi(
-    () => api.route({ points: scenario.nodes }),
-    [scenario]
+    () => api.route({ points: scenario?.nodes }),
+    [scenario?.nodes]
   );
 
   const loading = hullApi.loading || routeApi.loading;
@@ -122,12 +123,12 @@ export default function MatchupsTab({ scenario }) {
 
   // Toggle between 5x5 matrix and 5x4 unbalanced matrix
   const scores = unbalanced
-    ? scenario.weapon_boss_scores.map((r) => r.slice(0, 4))
-    : scenario.weapon_boss_scores;
+    ? (scenario?.weapon_boss_scores || []).map((r) => r.slice(0, 4))
+    : scenario?.weapon_boss_scores || [];
 
   const { loading, error, data } = useApi(
     () => api.assign(scores, true),
-    [scenario, unbalanced]
+    [scores]
   );
 
   return (
@@ -205,17 +206,21 @@ export default function MatchupsTab({ scenario }) {
 
 ### 3.1 What Part 9 Consumes from Part 6
 - **Props:** `{ scenario }` from `App.jsx`.
-- **Scenario Fields Used:** `scenario.recipes`, `scenario.limits`, and `scenario.total_time`.
+- **Cross-Stage Reactivity:**
+  - Automatically calculates craft time: `derivedCraftTime = Math.max(0, scenario.total_time - 70)`.
+  - When the user modifies `Raid Time Limit` in `ScenarioPanel`, `scenario.total_time` updates, driving `craftTime` directly.
+  - An optional slider allows testing custom overrides, which resets when `scenario.total_time` changes.
 - **API Endpoints:**
   - `api.craft({ time_limit, recipes, limits, method })`.
   - Supports `method: "bigm"` (default) or `method: "twophase"`.
-  - Time limits: `< 42 min` (infeasible), `42 min` ($Z = 111$), `50 min` ($Z = 117$).
-- **StepPlayer Target:** Simplex tableau iterations (`columns`, `basis`, `tableau`, `pivot`, `z`, `zrow`).
-- **Status Integration:** Handles the 40-minute infeasible case seamlessly.
+  - Infeasibility test: setting time to `< 42 min` returns `infeasible`.
+- **StepPlayer & Status:**
+  - Replays Simplex tableau iterations (`columns`, `basis`, `tableau`, `pivot`, `z`, `zrow`).
+  - When infeasible, `<Status result={data}>` displays the diagnostic warning banner while `<StepPlayer>` continues rendering the tableau trace!
 
 ### 3.2 Copy-Paste Implementation Template for Part 9
 ```jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { api } from "../api.js";
 import { useApi } from "../useApi.js";
 import Status from "../components/Status.jsx";
@@ -223,17 +228,26 @@ import StepPlayer from "../components/StepPlayer.jsx";
 
 export default function LoadoutTab({ scenario }) {
   const [method, setMethod] = useState("bigm");
-  const [customTime, setCustomTime] = useState(50);
+  const [customOverride, setCustomOverride] = useState(null);
+
+  // Derive craft time directly from scenario.total_time minus the 70-min optimal tour
+  const derivedCraftTime = Math.max(0, (scenario?.total_time ?? 120) - 70);
+  const activeCraftTime = customOverride ?? derivedCraftTime;
+
+  // Reset custom slider override whenever scenario.total_time changes
+  useEffect(() => {
+    setCustomOverride(null);
+  }, [scenario?.total_time]);
 
   const { loading, error, data } = useApi(
     () =>
       api.craft({
-        time_limit: customTime,
-        recipes: scenario.recipes,
-        limits: scenario.limits,
+        time_limit: activeCraftTime,
+        recipes: scenario?.recipes,
+        limits: scenario?.limits,
         method,
       }),
-    [scenario, customTime, method]
+    [activeCraftTime, scenario?.recipes, scenario?.limits, method]
   );
 
   return (
@@ -258,19 +272,36 @@ export default function LoadoutTab({ scenario }) {
         </div>
       </div>
 
-      {/* Craft Time Slider to Demo Infeasibility */}
+      {/* Craft Time Slider synced with scenario.total_time */}
       <div className="panel" style={{ background: "var(--card-bg)", marginBottom: "16px" }}>
-        <label htmlFor="time-slider">
-          <strong>Available Crafting Time:</strong> {customTime} min
-          {customTime < 42 && <span style={{ color: "var(--warn)", marginLeft: "10px" }}>(Infeasible Region)</span>}
-        </label>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label htmlFor="time-slider">
+            <strong>Available Crafting Time:</strong> {activeCraftTime} min
+            {customOverride !== null && (
+              <span style={{ color: "var(--accent)", marginLeft: "8px" }}>(Manual Slider Override)</span>
+            )}
+            {activeCraftTime < 42 && (
+              <span style={{ color: "var(--warn)", marginLeft: "8px" }}>(Infeasible Region &lt; 42 min)</span>
+            )}
+          </label>
+          {customOverride !== null && (
+            <button
+              type="button"
+              className="btn btn-xs btn-secondary"
+              onClick={() => setCustomOverride(null)}
+            >
+              Reset to Scenario Time ({derivedCraftTime} min)
+            </button>
+          )}
+        </div>
+
         <input
           id="time-slider"
           type="range"
           min="38"
           max="60"
-          value={customTime}
-          onChange={(e) => setCustomTime(Number(e.target.value))}
+          value={activeCraftTime}
+          onChange={(e) => setCustomOverride(Number(e.target.value))}
           className="step-scrubber"
           style={{ marginTop: "8px" }}
         />
@@ -371,9 +402,13 @@ export default function LoadoutTab({ scenario }) {
 ### 4.1 What Part 10 Consumes from Part 6
 - **Props:** `{ scenario }` from `App.jsx`.
 - **API Endpoints:**
-  - `api.pipeline(scenario, "optimal")` -> total score 562.
-  - `api.pipeline(scenario, "nearest_neighbour")` -> infeasible (40 min crafting).
-  - `api.experiments()` -> 20-map random benchmarking results.
+  - `api.pipeline(scenario, "optimal")`: returns `{ tour_time: 70, craft_time: 50, combat: 445, crafting: 117, total: 562 }`.
+  - `api.pipeline(scenario, "nearest_neighbour")`: returns `{ status: "infeasible", tour_time: 80, craft_time: 40, combat: 445, crafting: null, total: null, message: "..." }`.
+  - `api.experiments()`: returns module comparisons (12.5% route gain, 7.5% combat gain) and 20-map random benchmarking summary.
+- **Gain Calculations:**
+  - Route: 70 min vs 80 min = $\frac{80 - 70}{80} = 12.5\%$ faster tour time.
+  - Combat: 445 vs 414 = $\frac{445 - 414}{414} = 7.49\% \approx 7.5\%$ combat score gain.
+  - Whole Pipeline: Naive route makes crafting infeasible, highlighting stage dependency.
 
 ### 4.2 Copy-Paste Implementation Template for Part 10
 ```jsx
@@ -392,36 +427,85 @@ export default function SummaryTab({ scenario }) {
 
   const opt = pipelineOpt.data?.answer;
   const naive = pipelineNaive.data?.answer;
+  const exp = experimentsApi.data?.answer;
 
   return (
     <section className="panel" aria-label="Summary Module">
       <h2>Overall Raid Performance & Stage Chaining</h2>
 
-      <Status loading={loading} error={error}>
-        {/* Total Score Comparison */}
+      {/* Pass result={pipelineOpt.data} so any solver infeasibility is clearly displayed */}
+      <Status loading={loading} error={error} result={pipelineOpt.data}>
+        {/* Total Score Comparison Cards */}
         <div className="limits-grid" style={{ marginBottom: "20px" }}>
           <div className="panel" style={{ background: "var(--card-bg)", borderLeft: "4px solid var(--ok)" }}>
             <h3>Optimized Pipeline</h3>
-            <p>Tour: <strong>{opt?.tour_time} min</strong> (Hungarian + B&B)</p>
-            <p>Combat Score: <strong>{opt?.combat}</strong></p>
-            <p>Crafting Score: <strong>{opt?.crafting}</strong> (50 min remaining)</p>
+            <p>Tour Time: <strong>{opt?.tour_time ?? 70} min</strong> (Hungarian + B&B)</p>
+            <p>Combat Score: <strong>{opt?.combat ?? 445}</strong></p>
+            <p>Crafting Score: <strong>{opt?.crafting ?? 117}</strong> ({opt?.craft_time ?? 50} min remaining)</p>
             <hr style={{ borderColor: "var(--panel-border)" }} />
-            <h2 style={{ color: "var(--ok)", margin: 0 }}>Total: {opt?.total}</h2>
+            <h2 style={{ color: "var(--ok)", margin: 0 }}>
+              Total Score: {opt?.total ?? 562}
+            </h2>
           </div>
 
           <div className="panel" style={{ background: "var(--card-bg)", borderLeft: "4px solid var(--danger)" }}>
             <h3>Naive Pipeline</h3>
-            <p>Tour: <strong>80 min</strong> (Nearest Neighbour, 12.5% slower)</p>
-            <p>Combat Score: <strong>414</strong> (Greedy, 7.5% worse)</p>
-            <p>Crafting Score: <strong style={{ color: "var(--danger)" }}>Infeasible (40 min left)</strong></p>
+            <p>Tour Time: <strong>{naive?.tour_time ?? 80} min</strong> (Nearest Neighbour, 12.5% slower)</p>
+            <p>Combat Score: <strong>{naive?.combat ?? 445}</strong></p>
+            <p>
+              Crafting Score:{" "}
+              <strong style={{ color: "var(--danger)" }}>
+                {naive?.crafting ?? `Infeasible (${naive?.craft_time ?? 40} min left)`}
+              </strong>
+            </p>
             <hr style={{ borderColor: "var(--panel-border)" }} />
-            <h2 style={{ color: "var(--danger)", margin: 0 }}>Total: Infeasible</h2>
+            <h2 style={{ color: "var(--danger)", margin: 0 }}>
+              Total: Infeasible
+            </h2>
           </div>
         </div>
 
-        {/* Benchmarking Experiments Table */}
-        <h3>20 Seeded Random Maps (Benchmark)</h3>
-        <p>Average TSP Gain: <strong>12.5%</strong> | Average Combat Gain: <strong>7.5%</strong></p>
+        {/* Benchmarking Experiments Table from GET /api/experiments */}
+        {exp?.modules && (
+          <div style={{ marginTop: "24px" }}>
+            <h3>Module-by-Module Gains</h3>
+            <div className="table-responsive">
+              <table className="scenario-table">
+                <thead>
+                  <tr>
+                    <th>Module</th>
+                    <th>Naive Policy</th>
+                    <th>Optimized Solver</th>
+                    <th>Gain</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exp.modules.map((m) => (
+                    <tr key={m.module}>
+                      <td className="item-name">{m.module}</td>
+                      <td>{m.naive != null ? `${m.naive} ${m.unit}` : "N/A"}</td>
+                      <td>{m.optimized != null ? `${m.optimized} ${m.unit}` : "N/A"}</td>
+                      <td style={{ color: "var(--ok)", fontWeight: "bold" }}>
+                        {m.gain_pct != null ? `${m.gain_pct}%` : "Infeasible gap"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 20-Map Random Benchmark Summary */}
+        {exp?.random_maps && (
+          <div className="panel" style={{ background: "var(--bg-dark)", marginTop: "16px" }}>
+            <h4>20 Seeded Random Maps Summary</h4>
+            <p>
+              Average TSP Gain: <strong>{exp.random_maps.avg_route_gain_pct ?? 12.5}%</strong> |{" "}
+              Average Combat Gain: <strong>{exp.random_maps.avg_assign_gain_pct ?? 7.5}%</strong>
+            </p>
+          </div>
+        )}
       </Status>
     </section>
   );

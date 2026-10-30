@@ -8,11 +8,11 @@ const RECIPE_ITEMS = [
 ];
 
 const RECIPE_ATTRS = [
-  { key: "score", label: "Score / unit", min: 0 },
-  { key: "time", label: "Craft time (min)", min: 1 },
-  { key: "weight", label: "Weight (kg)", min: 0 },
-  { key: "stamina", label: "Stamina cost", min: 0 },
-  { key: "survival", label: "Survival points", min: 0 },
+  { key: "score", label: "Score / unit", min: 0, integer: false },
+  { key: "time", label: "Craft time (min)", min: 1, integer: true },
+  { key: "weight", label: "Weight (kg)", min: 0, integer: false },
+  { key: "stamina", label: "Stamina cost", min: 0, integer: false },
+  { key: "survival", label: "Survival points", min: 0, integer: false },
 ];
 
 /**
@@ -26,17 +26,23 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
   if (!scenario) return null;
 
   const handleTotalTimeChange = (e) => {
-    const val = Number(e.target.value);
-    if (isNaN(val) || val < 0) return;
+    const raw = e.target.value.trim();
+    if (raw === "") return;
+    const num = Number(raw);
+    if (!Number.isFinite(num) || num < 1) return;
+    const val = Math.floor(num);
     onChange?.({
       ...scenario,
       total_time: val,
     });
   };
 
-  const handleLimitChange = (key, value) => {
-    const val = Number(value);
-    if (isNaN(val) || val < 0) return;
+  const handleLimitChange = (key, rawValue, min = 0, isInt = false) => {
+    const raw = String(rawValue).trim();
+    if (raw === "") return;
+    const num = Number(raw);
+    if (!Number.isFinite(num) || num < min) return;
+    const val = isInt ? Math.floor(num) : num;
     onChange?.({
       ...scenario,
       limits: {
@@ -46,9 +52,12 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
     });
   };
 
-  const handleRecipeChange = (attr, itemIndex, value) => {
-    const val = Number(value);
-    if (isNaN(val) || val < 0) return;
+  const handleRecipeChange = (attr, itemIndex, rawValue, min = 0, isInt = false) => {
+    const raw = String(rawValue).trim();
+    if (raw === "") return;
+    const num = Number(raw);
+    if (!Number.isFinite(num) || num < min) return;
+    const val = isInt ? Math.floor(num) : num;
     const currentList = scenario.recipes?.[attr] || [];
     const nextList = [...currentList];
     nextList[itemIndex] = val;
@@ -68,7 +77,7 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
     <details className="panel scenario-panel" open>
       <summary className="scenario-summary">
         <span className="scenario-title">
-          Scenario Configuration ({nodeCount} nodes, {lootCount} loot drops)
+          Scenario ({nodeCount} nodes, {lootCount} loot drops)
         </span>
         {isEdited && <span className="badge badge-warn">Modified</span>}
         {onReset && (
@@ -99,7 +108,8 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
               id="input-total-time"
               type="number"
               min="1"
-              value={scenario.total_time ?? 120}
+              step="1"
+              value={scenario.total_time ?? ""}
               onChange={handleTotalTimeChange}
               className="form-input num-input"
             />
@@ -116,8 +126,8 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
                 id="limit-weight"
                 type="number"
                 min="0"
-                value={scenario.limits?.weight ?? 40}
-                onChange={(e) => handleLimitChange("weight", e.target.value)}
+                value={scenario.limits?.weight ?? ""}
+                onChange={(e) => handleLimitChange("weight", e.target.value, 0, false)}
                 className="form-input num-input"
               />
             </div>
@@ -127,8 +137,8 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
                 id="limit-stamina"
                 type="number"
                 min="0"
-                value={scenario.limits?.stamina ?? 90}
-                onChange={(e) => handleLimitChange("stamina", e.target.value)}
+                value={scenario.limits?.stamina ?? ""}
+                onChange={(e) => handleLimitChange("stamina", e.target.value, 0, false)}
                 className="form-input num-input"
               />
             </div>
@@ -138,8 +148,8 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
                 id="limit-survival"
                 type="number"
                 min="0"
-                value={scenario.limits?.survival_min ?? 30}
-                onChange={(e) => handleLimitChange("survival_min", e.target.value)}
+                value={scenario.limits?.survival_min ?? ""}
+                onChange={(e) => handleLimitChange("survival_min", e.target.value, 0, false)}
                 className="form-input num-input"
               />
             </div>
@@ -149,8 +159,9 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
                 id="limit-slots"
                 type="number"
                 min="1"
-                value={scenario.limits?.slots ?? 14}
-                onChange={(e) => handleLimitChange("slots", e.target.value)}
+                step="1"
+                value={scenario.limits?.slots ?? ""}
+                onChange={(e) => handleLimitChange("slots", e.target.value, 1, true)}
                 className="form-input num-input"
               />
             </div>
@@ -175,7 +186,7 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
                   <tr key={item.id}>
                     <td className="item-name">{item.name}</td>
                     {RECIPE_ATTRS.map((a) => {
-                      const val = scenario.recipes?.[a.key]?.[idx] ?? 0;
+                      const val = scenario.recipes?.[a.key]?.[idx] ?? "";
                       const inputId = `recipe-${item.id}-${a.key}`;
                       return (
                         <td key={a.key}>
@@ -184,8 +195,11 @@ export default function ScenarioPanel({ scenario, onChange, onReset, isEdited = 
                             aria-label={`${item.name} ${a.label}`}
                             type="number"
                             min={a.min}
+                            step={a.integer ? "1" : "any"}
                             value={val}
-                            onChange={(e) => handleRecipeChange(a.key, idx, e.target.value)}
+                            onChange={(e) =>
+                              handleRecipeChange(a.key, idx, e.target.value, a.min, a.integer)
+                            }
                             className="form-input num-input table-input"
                           />
                         </td>

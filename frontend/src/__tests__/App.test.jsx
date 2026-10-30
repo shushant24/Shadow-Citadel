@@ -7,7 +7,7 @@ test("renders all four tabs and loads the scenario from fixtures", async () => {
   for (const name of ["Map", "Matchups", "Loadout", "Summary"]) {
     expect(screen.getByRole("tab", { name })).toBeInTheDocument();
   }
-  expect(await screen.findByText(/Scenario Configuration \(8 nodes, 4 loot drops\)/)).toBeInTheDocument();
+  expect(await screen.findByText(/Scenario \(8 nodes, 4 loot drops\)/)).toBeInTheDocument();
   expect(screen.getByText("Fixtures Mode")).toBeInTheDocument();
 });
 

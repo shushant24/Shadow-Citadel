@@ -4,7 +4,11 @@ import { useApi } from "../useApi.js";
 import Status from "../components/Status.jsx";
 
 export default function MatchupsTab({ scenario }) {
-  const { loading, error, data } = useApi(() => api.assign(scenario.weapon_boss_scores, true), [scenario]);
+  // Only re-fetch if weapon boss scores change
+  const { loading, error, data } = useApi(
+    () => api.assign(scenario?.weapon_boss_scores || [], true),
+    [scenario?.weapon_boss_scores]
+  );
   return (
     <section className="panel" aria-label="Matchups">
       <h2>Matchups</h2>

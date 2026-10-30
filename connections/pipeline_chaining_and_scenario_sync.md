@@ -1,6 +1,6 @@
 # Pipeline Chaining and Scenario Sync Guide
 
-This document explains the mathematical and reactive dependency chain connecting the 4 stages together through Part 6's [`ScenarioPanel.jsx`](file:///Users/visheshagrawal/Shadow-Citadel/frontend/src/components/ScenarioPanel.jsx) and [`api.js`](file:///Users/visheshagrawal/Shadow-Citadel/frontend/src/api.js).
+This document explains the mathematical and reactive dependency chain connecting the 4 stages together through Part 6's [`ScenarioPanel.jsx`](../frontend/src/components/ScenarioPanel.jsx) and [`api.js`](../frontend/src/api.js).
 
 ---
 
@@ -31,14 +31,14 @@ $$\text{craft\_time} = \text{scenario.total\_time} - \text{tour\_time}$$
 +-----------------------------------------------------------------------------------------+
 |                                  WHOLE RAID SCORE TOTAL                                 |
 |   445 (Combat) + 117 (Crafting) = 562       |     445 (Combat) + Infeasible = INFEASIBLE|
-+-----------------------------------------------------------------------------------------+
++---------------------------------------------+-------------------------------------------+
 ```
 
 ---
 
 ## 2. Reactive Data Flow Triggered by `ScenarioPanel`
 
-When any parameter is edited in [`ScenarioPanel.jsx`](file:///Users/visheshagrawal/Shadow-Citadel/frontend/src/components/ScenarioPanel.jsx), the update ripples reactively through Part 6 into the active tab:
+When any parameter is edited in [`ScenarioPanel.jsx`](../frontend/src/components/ScenarioPanel.jsx), the update ripples reactively through Part 6 into the active tab:
 
 ```mermaid
 sequenceDiagram
@@ -74,7 +74,7 @@ sequenceDiagram
 ## 3. End-to-End Live vs. Fixture Mode Sync
 
 ### 3.1 Offline / Fixture Mode (`VITE_USE_FIXTURES=true`)
-In offline mode, Part 6's [`api.js`](file:///Users/visheshagrawal/Shadow-Citadel/frontend/src/api.js) routes inputs to pre-computed fixtures to guarantee reproducibility:
+In offline mode, Part 6's [`api.js`](../frontend/src/api.js) routes inputs to pre-computed fixtures to guarantee reproducibility:
 - `time_limit < 42` $\rightarrow$ `craft_infeasible.json`
 - `time_limit == 42` $\rightarrow$ `craft_42.json`
 - `time_limit >= 43` $\rightarrow$ `craft.json` (or `craft_twophase.json`)

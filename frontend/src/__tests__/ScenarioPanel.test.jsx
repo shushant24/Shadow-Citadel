@@ -7,7 +7,7 @@ describe("ScenarioPanel component", () => {
   test("renders all scenario configuration sections and inputs", () => {
     render(<ScenarioPanel scenario={scenarioFixture} onChange={vi.fn()} />);
 
-    expect(screen.getByText(/Scenario Configuration \(8 nodes, 4 loot drops\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Scenario \(8 nodes, 4 loot drops\)/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Raid Time Limit/i)).toHaveValue(120);
 
     expect(screen.getByLabelText(/Max Weight/i)).toHaveValue(40);
@@ -21,9 +21,15 @@ describe("ScenarioPanel component", () => {
     expect(screen.getByText("x4 Shield scroll")).toBeInTheDocument();
   });
 
-  test("editing raid time limit calls onChange with updated total_time", () => {
+  test("returns null when scenario is null", () => {
+    const { container } = render(<ScenarioPanel scenario={null} onChange={vi.fn()} />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  test("editing raid time limit calls onChange and preserves nodes, loot, and weapon scores", () => {
     const handleChange = vi.fn();
-    render(<ScenarioPanel scenario={scenarioFixture} onChange={handleChange} />);
+    const clonedFixture = structuredClone(scenarioFixture);
+    render(<ScenarioPanel scenario={clonedFixture} onChange={handleChange} />);
 
     const timeInput = screen.getByLabelText(/Raid Time Limit/i);
     fireEvent.change(timeInput, { target: { value: "110" } });
@@ -32,6 +38,34 @@ describe("ScenarioPanel component", () => {
     const updated = handleChange.mock.calls[0][0];
     expect(updated.total_time).toBe(110);
     expect(updated.nodes).toEqual(scenarioFixture.nodes);
+    expect(updated.loot).toEqual(scenarioFixture.loot);
+    expect(updated.weapon_boss_scores).toEqual(scenarioFixture.weapon_boss_scores);
+
+    // Verify defensive immutability: original fixture untouched
+    expect(clonedFixture.total_time).toBe(120);
+  });
+
+  test("rejects invalid, negative, or empty input without calling onChange", () => {
+    const handleChange = vi.fn();
+    render(<ScenarioPanel scenario={scenarioFixture} onChange={handleChange} />);
+
+    const timeInput = screen.getByLabelText(/Raid Time Limit/i);
+
+    // Empty input
+    fireEvent.change(timeInput, { target: { value: "" } });
+    expect(handleChange).not.toHaveBeenCalled();
+
+    // Negative input
+    fireEvent.change(timeInput, { target: { value: "-10" } });
+    expect(handleChange).not.toHaveBeenCalled();
+
+    // Zero input for total_time (min is 1)
+    fireEvent.change(timeInput, { target: { value: "0" } });
+    expect(handleChange).not.toHaveBeenCalled();
+
+    // Non-numeric string
+    fireEvent.change(timeInput, { target: { value: "abc" } });
+    expect(handleChange).not.toHaveBeenCalled();
   });
 
   test("editing limits calls onChange with updated limits", () => {
@@ -60,9 +94,22 @@ describe("ScenarioPanel component", () => {
     expect(updated.recipes.score[1]).toBe(scenarioFixture.recipes.score[1]);
   });
 
-  test("reset button calls onReset when modified", () => {
+  test("reset button is disabled when not edited, and calls onReset when modified", () => {
     const handleReset = vi.fn();
-    render(
+    const { rerender } = render(
+      <ScenarioPanel
+        scenario={scenarioFixture}
+        onChange={vi.fn()}
+        onReset={handleReset}
+        isEdited={false}
+      />
+    );
+
+    const resetBtn = screen.getByRole("button", { name: /Reset to Defaults/i });
+    expect(resetBtn).toBeDisabled();
+
+    // Rerender as modified
+    rerender(
       <ScenarioPanel
         scenario={scenarioFixture}
         onChange={vi.fn()}
@@ -71,7 +118,6 @@ describe("ScenarioPanel component", () => {
       />
     );
 
-    const resetBtn = screen.getByRole("button", { name: /Reset to Defaults/i });
     expect(resetBtn).not.toBeDisabled();
     fireEvent.click(resetBtn);
     expect(handleReset).toHaveBeenCalledTimes(1);

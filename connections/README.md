@@ -79,14 +79,14 @@ Every API response and fixture must return:
 }
 ```
 - **HTTP Status:** Infeasible and unbounded results return **HTTP 200** (not 4xx/5xx).
-- **Human-Readable Message:** When `status !== "optimal"`, `answer.message` must contain a single explanation sentence. [`Status.jsx`](file:///Users/visheshagrawal/Shadow-Citadel/frontend/src/components/Status.jsx) automatically renders this in an accessible warning banner while keeping child visualizations rendered.
+- **Human-Readable Message:** When `status !== "optimal"`, `answer.message` must contain a single explanation sentence. [`Status.jsx`](../frontend/src/components/Status.jsx) automatically renders this in an accessible warning banner while keeping child visualizations rendered.
 
 ### Rule 2: Tab Component Signature
 Every tab component in `frontend/src/tabs/` receives a single prop:
 ```jsx
 export default function TabName({ scenario }) { ... }
 ```
-When a user edits any parameter in [`ScenarioPanel.jsx`](file:///Users/visheshagrawal/Shadow-Citadel/frontend/src/components/ScenarioPanel.jsx), `App.jsx` updates its state and passes the updated `scenario` prop to the tab.
+When a user edits any parameter in [`ScenarioPanel.jsx`](../frontend/src/components/ScenarioPanel.jsx), `App.jsx` updates its state and passes the updated `scenario` prop to the tab.
 
 ### Rule 3: Reusable Data Fetching via `useApi`
 All tabs execute their data fetching using:
@@ -99,7 +99,7 @@ const { loading, error, data } = useApi(() => api.endpointName(...), [scenario])
 Passing `[scenario]` in the dependency array guarantees that any change in `ScenarioPanel` automatically triggers re-fetching/re-calculation.
 
 ### Rule 4: Universal Step Playback via `StepPlayer`
-Any tab with an ordered sequence of algorithm steps plugs into [`StepPlayer.jsx`](file:///Users/visheshagrawal/Shadow-Citadel/frontend/src/components/StepPlayer.jsx) using the render-prop pattern:
+Any tab with an ordered sequence of algorithm steps plugs into [`StepPlayer.jsx`](../frontend/src/components/StepPlayer.jsx) using the render-prop pattern:
 ```jsx
 <StepPlayer steps={data?.steps || []}>
   {(currentStep, index) => (

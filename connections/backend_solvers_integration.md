@@ -1,6 +1,6 @@
 # Backend Solvers Integration Guide (Parts 1, 2, 3, 4, 5)
 
-This document provides the exact specifications for backend engineers (Parts 1–5) to connect their Python solvers and FastAPI routers to Part 6's API client ([`api.js`](file:///Users/visheshagrawal/Shadow-Citadel/frontend/src/api.js)), envelope handler ([`Status.jsx`](file:///Users/visheshagrawal/Shadow-Citadel/frontend/src/components/Status.jsx)), and replay player ([`StepPlayer.jsx`](file:///Users/visheshagrawal/Shadow-Citadel/frontend/src/components/StepPlayer.jsx)).
+This document provides the exact specifications for backend engineers (Parts 1–5) to connect their Python solvers and FastAPI routers to Part 6's API client ([`api.js`](../frontend/src/api.js)), envelope handler ([`Status.jsx`](../frontend/src/components/Status.jsx)), and replay player ([`StepPlayer.jsx`](../frontend/src/components/StepPlayer.jsx)).
 
 ---
 
