@@ -51,14 +51,14 @@ def test_route_endpoint_accepts_points_instead_of_a_matrix(scenario):
     assert result["answer"]["cost"] == 70
 
 
-@pending
+
 def test_assign_endpoint_matches_fixture(scenario, fixture):
     result = call("POST", "/api/assign", json={"scores": scenario["weapon_boss_scores"], "maximize": True})
     check_contract("assign", result)
     assert result["answer"]["total"] == fixture("assign")["answer"]["total"]
 
 
-@pending
+
 def test_assign_endpoint_handles_an_unbalanced_matrix(scenario):
     scores = [row[:4] for row in scenario["weapon_boss_scores"]]
     result = call("POST", "/api/assign", json={"scores": scores, "maximize": True})

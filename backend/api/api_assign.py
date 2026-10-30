@@ -1,10 +1,12 @@
-"""Part 3: /api/assign."""
+"""Part 3: POST /api/assign assignment endpoint."""
+from __future__ import annotations
+
 from typing import List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from api._stub import not_implemented
+from solvers.hungarian import AssignmentError, solve_assignment
 
 router = APIRouter()
 
@@ -16,5 +18,8 @@ class AssignRequest(BaseModel):
 
 @router.post("/assign")
 def post_assign(req: AssignRequest) -> dict:
-    # TODO(Part 3): solvers.hungarian.solve_assignment(req.scores, req.maximize) -> envelope(...)
-    raise not_implemented(3, "/api/assign")
+    """Return the Hungarian solver's envelope and replayable steps."""
+    try:
+        return solve_assignment(req.scores, maximize=req.maximize)
+    except AssignmentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
