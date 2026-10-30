@@ -66,7 +66,6 @@ def test_assign_endpoint_handles_an_unbalanced_matrix(scenario):
     assert result["answer"]["total"] == 385
 
 
-@pending
 def test_craft_endpoint_matches_fixture(scenario, fixture):
     body = {"time_limit": 50, "recipes": scenario["recipes"], "limits": scenario["limits"], "method": "bigm"}
     result = call("POST", "/api/craft", json=body)
@@ -76,7 +75,6 @@ def test_craft_endpoint_matches_fixture(scenario, fixture):
     assert result["answer"]["shadow_prices"]["slots"] == pytest.approx(4.25)
 
 
-@pending
 def test_craft_endpoint_both_methods_and_the_special_cases(scenario):
     base = {"recipes": scenario["recipes"], "limits": scenario["limits"]}
     for method in ("bigm", "twophase"):
