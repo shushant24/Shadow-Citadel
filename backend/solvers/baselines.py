@@ -1,111 +1,77 @@
 """Part 10: Naive baselines: nearest neighbour, greedy assignment, equal-split crafting."""
 
-from typing import Any, Dict, List, Optional, Union
+from __future__ import annotations
+
+import math
+from typing import Any, Dict, List, NamedTuple, Optional, Union
 
 
-class TourResult(tuple):
-    """Tuple (tour, cost) that also supports dict-like and attribute-style access."""
-    def __new__(cls, tour: List[str], cost: Union[int, float]):
-        return super().__new__(cls, (tour, cost))
-
-    @property
-    def tour(self) -> List[str]:
-        return self[0]
-
-    @property
-    def cost(self) -> Union[int, float]:
-        return self[1]
-
-    def __getitem__(self, item: Any) -> Any:
-        if item == "tour":
-            return self[0]
-        if item == "cost":
-            return self[1]
-        return super().__getitem__(item)
-
-    def get(self, item: str, default: Any = None) -> Any:
-        if item == "tour":
-            return self[0]
-        if item == "cost":
-            return self[1]
-        return default
+class TourResult(NamedTuple):
+    """Result of nearest neighbour tour."""
+    tour: List[str]
+    cost: Union[int, float]
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"tour": self[0], "cost": self[1]}
+        return {"tour": self.tour, "cost": self.cost}
 
 
-class AssignmentResult(tuple):
-    """Tuple (pairs, total) that also supports dict-like and attribute-style access."""
-    def __new__(cls, pairs: List[List[int]], total: Union[int, float]):
-        return super().__new__(cls, (pairs, total))
-
-    @property
-    def pairs(self) -> List[List[int]]:
-        return self[0]
-
-    @property
-    def total(self) -> Union[int, float]:
-        return self[1]
-
-    def __getitem__(self, item: Any) -> Any:
-        if item == "pairs":
-            return self[0]
-        if item == "total":
-            return self[1]
-        return super().__getitem__(item)
-
-    def get(self, item: str, default: Any = None) -> Any:
-        if item == "pairs":
-            return self[0]
-        if item == "total":
-            return self[1]
-        return default
+class AssignmentResult(NamedTuple):
+    """Result of greedy assignment."""
+    pairs: List[List[int]]
+    total: Union[int, float]
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"pairs": self[0], "total": self[1]}
+        return {"pairs": self.pairs, "total": self.total}
 
 
-class CraftingPlan(tuple):
-    """Tuple (x, score) that also supports attribute-style and dict access."""
-    def __new__(cls, x: List[int], score: Union[int, float]):
-        return super().__new__(cls, (x, score))
+class CraftingPlan(NamedTuple):
+    """Result of equal-split crafting."""
+    x: List[int]
+    score: Union[int, float]
 
-    @property
-    def x(self) -> List[int]:
-        return self[0]
-
-    @property
-    def score(self) -> Union[int, float]:
-        return self[1]
-
-    def __getitem__(self, item: Any) -> Any:
-        if item == "x":
-            return self[0]
-        if item == "score":
-            return self[1]
-        return super().__getitem__(item)
-
-    def get(self, item: str, default: Any = None) -> Any:
-        if item == "x":
-            return self[0]
-        if item == "score":
-            return self[1]
-        return default
+    def to_dict(self) -> Dict[str, Any]:
+        return {"x": self.x, "score": self.score}
 
 
-def nearest_neighbour(matrix: List[List[Union[int, float]]], labels: List[str], start: Union[str, int] = "Base") -> TourResult:
+def nearest_neighbour(
+    matrix: List[List[Union[int, float]]],
+    labels: List[str],
+    start: Union[str, int] = "Base",
+) -> TourResult:
     """Return (tour_labels_including_return, cost). Expected: 80 on the demo matrix."""
     n = len(matrix)
+    if len(labels) != n:
+        raise ValueError(
+            f"Dimension mismatch: len(labels)={len(labels)} does not match len(matrix)={n}."
+        )
+
+    for ri, row in enumerate(matrix):
+        if len(row) != n:
+            raise ValueError(
+                f"Matrix must be square: row {ri} has length {len(row)}, expected {n}."
+            )
+
     if n == 0:
         return TourResult([], 0)
 
     if isinstance(start, str):
-        if start in labels:
-            start_idx = labels.index(start)
-        else:
-            start_idx = 0
+        if start not in labels:
+            raise ValueError(
+                f"Unknown start label '{start}'. Available labels: {labels}"
+            )
+        start_idx = labels.index(start)
+    elif isinstance(start, int) and not isinstance(start, bool):
+        if start < 0 or start >= n:
+            raise ValueError(f"start index {start} out of range [0, {n - 1}].")
+        start_idx = start
     else:
-        start_idx = int(start)
+        raise ValueError(f"start must be a string label or integer index, got {start!r}")
+
+    if n == 1:
+        c = matrix[0][0]
+        if not math.isfinite(c):
+            raise ValueError(f"Self-loop distance for '{labels[0]}' is not finite: {c}")
+        return TourResult([labels[0], labels[0]], c)
 
     visited = {start_idx}
     tour_indices = [start_idx]
@@ -118,16 +84,24 @@ def nearest_neighbour(matrix: List[List[Union[int, float]]], labels: List[str], 
         for candidate in range(n):
             if candidate not in visited:
                 d = matrix[current][candidate]
-                if d < best_dist:
+                if math.isfinite(d) and d < best_dist:
                     best_dist = d
                     best_candidate = candidate
 
         if best_candidate is None:
-            break
+            raise ValueError(
+                f"No reachable unvisited node from '{labels[current]}' (visited {len(visited)} of {n} nodes)."
+            )
 
         visited.add(best_candidate)
         tour_indices.append(best_candidate)
         current = best_candidate
+
+    return_dist = matrix[current][start_idx]
+    if not math.isfinite(return_dist):
+        raise ValueError(
+            f"No reachable return arc from '{labels[current]}' back to start '{labels[start_idx]}'."
+        )
 
     tour_indices.append(start_idx)
     cost = sum(matrix[tour_indices[i]][tour_indices[i + 1]] for i in range(len(tour_indices) - 1))
@@ -143,6 +117,22 @@ def greedy_assignment(scores: List[List[Union[int, float]]]) -> AssignmentResult
         return AssignmentResult([], 0)
 
     num_cols = len(scores[0])
+    if num_cols == 0:
+        if all(len(row) == 0 for row in scores):
+            return AssignmentResult([], 0)
+        raise ValueError("scores rows must be non-empty.")
+
+    for ri, row in enumerate(scores):
+        if len(row) != num_cols:
+            raise ValueError(
+                f"scores must be rectangular: row {ri} has length {len(row)}, expected {num_cols}."
+            )
+        for ci, val in enumerate(row):
+            if not isinstance(val, (int, float)) or isinstance(val, bool) or not math.isfinite(val):
+                raise ValueError(
+                    f"scores[{ri}][{ci}] must be a finite number, got {val!r}."
+                )
+
     assigned_cols = set()
     pairs = []
     total = 0
