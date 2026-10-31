@@ -1,7 +1,7 @@
 import itertools
 import random
 
-from conftest import check_contract, check_envelope, pending
+from conftest import check_contract, check_envelope
 from solvers.tsp import solve_tsp
 
 
@@ -11,7 +11,6 @@ def brute_force_tour_cost(matrix):
                for p in itertools.permutations(range(1, n)))
 
 
-@pending
 def test_first_pass_is_64_with_two_subtours(time_matrix):
     result = solve_tsp(time_matrix["matrix"], time_matrix["labels"])
     check_envelope(result)
@@ -20,7 +19,6 @@ def test_first_pass_is_64_with_two_subtours(time_matrix):
         sorted([sorted(["Base", "C7", "C5"]), sorted(["C1", "C6", "C3", "C4", "C2"])])
 
 
-@pending
 def test_optimal_tour_is_70(time_matrix):
     result = solve_tsp(time_matrix["matrix"], time_matrix["labels"])
     assert result["answer"]["cost"] == 70
@@ -28,7 +26,6 @@ def test_optimal_tour_is_70(time_matrix):
     assert tour[0] == tour[-1] == "Base" and len(set(tour)) == 8
 
 
-@pending
 def test_matches_brute_force_on_seeded_random_matrices():
     rng = random.Random(7)
     for _ in range(5):
@@ -38,7 +35,6 @@ def test_matches_brute_force_on_seeded_random_matrices():
         assert result["answer"]["cost"] == brute_force_tour_cost(m)
 
 
-@pending
 def test_trace_follows_the_route_contract(time_matrix):
     result = solve_tsp(time_matrix["matrix"], time_matrix["labels"])
     check_contract("route", result)
@@ -48,15 +44,45 @@ def test_trace_follows_the_route_contract(time_matrix):
     assert any(s["status"] == "pruned" for s in steps)
 
 
-@pending
 def test_answer_includes_the_nearest_neighbour_baseline(time_matrix):
     nn = solve_tsp(time_matrix["matrix"], time_matrix["labels"])["answer"]["nearest_neighbour"]
     assert nn["cost"] == 80 and nn["tour"][0] == nn["tour"][-1] == "Base"
 
 
-@pending
 def test_a_matrix_whose_assignment_is_already_one_tour_needs_no_branching():
     m = [[0, 1, 9], [9, 0, 1], [1, 9, 0]]  # cheapest assignment is the single cycle 0 -> 1 -> 2 -> 0
     result = solve_tsp(m, ["A", "B", "C"])
     assert result["answer"]["cost"] == result["answer"]["relaxation_cost"] == 3
     assert len(result["steps"]) == 1 and result["steps"][0]["status"] == "feasible"
+
+
+def test_nearest_neighbour_consistency_with_baselines(time_matrix):
+    """solve_tsp's nearest_neighbour answer matches solvers.baselines.nearest_neighbour."""
+    from solvers.baselines import nearest_neighbour
+
+    # 1. Demo matrix
+    tsp_res = solve_tsp(time_matrix["matrix"], time_matrix["labels"])
+    baseline_res = nearest_neighbour(time_matrix["matrix"], time_matrix["labels"], start="Base")
+    assert tsp_res["answer"]["nearest_neighbour"]["cost"] == baseline_res.cost
+    assert tsp_res["answer"]["nearest_neighbour"]["tour"] == baseline_res.tour
+
+    # 2. Seeded random matrices
+    rng = random.Random(42)
+    for _ in range(5):
+        n = 8
+        m = [[0 if i == j else rng.randint(5, 50) for j in range(n)] for i in range(n)]
+        labels = ["Base"] + [f"C{i}" for i in range(1, n)]
+        tsp_r = solve_tsp(m, labels)
+        base_r = nearest_neighbour(m, labels, start="Base")
+        assert tsp_r["answer"]["nearest_neighbour"]["cost"] == base_r.cost
+        assert tsp_r["answer"]["nearest_neighbour"]["tour"] == base_r.tour
+
+    # 3. Start node where labels[0] is not "Base"
+    m_arb = [[0, 10, 20], [10, 0, 15], [20, 15, 0]]
+    labels_arb = ["C1", "C2", "C3"]
+    tsp_arb = solve_tsp(m_arb, labels_arb)
+    base_arb = nearest_neighbour(m_arb, labels_arb, start=labels_arb[0])
+    assert tsp_arb["answer"]["nearest_neighbour"]["cost"] == base_arb.cost
+    assert tsp_arb["answer"]["nearest_neighbour"]["tour"] == base_arb.tour
+    assert tsp_arb["answer"]["nearest_neighbour"]["tour"][0] == "C1"
+    assert tsp_arb["answer"]["tour"][0] == "C1"

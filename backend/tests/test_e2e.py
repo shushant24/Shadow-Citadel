@@ -35,7 +35,6 @@ def test_hull_endpoint_matches_fixture(scenario, fixture):
     assert result["answer"]["vertices"] == fixture("hull")["answer"]["vertices"]
 
 
-@pending
 def test_route_endpoint_matches_fixture(time_matrix, fixture):
     result = call("POST", "/api/route", json=time_matrix)
     check_contract("route", result)
@@ -43,7 +42,6 @@ def test_route_endpoint_matches_fixture(time_matrix, fixture):
     assert result["answer"]["nearest_neighbour"]["cost"] == 80
 
 
-@pending
 def test_route_endpoint_accepts_points_instead_of_a_matrix(scenario):
     result = call("POST", "/api/route", json={"points": scenario["nodes"]})
     check_contract("route", result)
