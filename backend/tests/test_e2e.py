@@ -36,7 +36,6 @@ def test_hull_endpoint_matches_fixture(scenario, fixture):
     assert result["answer"]["vertices"] == fixture("hull")["answer"]["vertices"]
 
 
-@pending
 def test_route_endpoint_matches_fixture(time_matrix, fixture):
     result = call("POST", "/api/route", json=time_matrix)
     check_contract("route", result)
