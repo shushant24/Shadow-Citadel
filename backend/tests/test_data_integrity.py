@@ -19,7 +19,7 @@ def test_scenario_has_expected_shape(scenario):
 
 
 def test_fixtures_follow_the_envelope(fixture):
-    for name in ["hull", "route", "assign", "assign_adjust", "assign_unbalanced", "craft", "craft_42", "craft_twophase",
+    for name in ["hull", "route", "assign", "assign_adjust", "assign_unbalanced", "assign_4x5", "assign_adjust_min", "craft", "craft_42", "craft_twophase",
                  "craft_infeasible", "pipeline", "pipeline_naive", "experiments"]:
         check_envelope(fixture(name))
 

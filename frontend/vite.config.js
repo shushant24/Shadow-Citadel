@@ -1,10 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
 // Shared fixtures live in ../fixtures so the backend tests and the frontend use the same files.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: { alias: { "@fixtures": path.resolve(__dirname, "../fixtures") } },
   server: {
     port: 5173,

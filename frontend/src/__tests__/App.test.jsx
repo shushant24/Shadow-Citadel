@@ -14,7 +14,9 @@ test("renders all four tabs and loads the scenario from fixtures", async () => {
 test("switching tabs shows that tab's fixture result", async () => {
   render(<App />);
   fireEvent.click(await screen.findByRole("tab", { name: "Matchups" }));
-  expect(await screen.findByText(/"total": 445/)).toBeInTheDocument();
+  // Matchups does not solve on open; the viewer presses Solve.
+  fireEvent.click(await screen.findByRole("button", { name: /^solve$/i }));
+  expect((await screen.findAllByText("445")).length).toBeGreaterThan(0);
 });
 
 test("editing scenario updates state and shows modified badge, reset clears it", async () => {
