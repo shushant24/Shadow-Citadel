@@ -812,6 +812,7 @@ body {
 }
 
 .map-svg-canvas {
+  touch-action: none;
   width: 100%;
   height: auto;
   aspect-ratio: 840 / 600;
@@ -967,3 +968,32 @@ body {
 
 .action-push { background: var(--ok-bg); color: var(--ok); }
 .action-pop { background: var(--danger-bg); color: var(--danger); }
+.badge-danger {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid rgba(239, 71, 111, 0.4);
+}
+
+.badge-ok {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  background: var(--ok-bg);
+  color: var(--ok);
+  border: 1px solid rgba(6, 214, 160, 0.4);
+}
+
+.text-ok {
+  color: var(--ok);
+}
+
+.text-danger {
+  color: var(--danger);
+}

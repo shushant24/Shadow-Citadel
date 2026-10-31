@@ -9,7 +9,7 @@ function crossProduct(o, a, b) {
   return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 }
 
-// Client-side Convex Hull (Monotone Chain / Graham scan) for interactive dragging
+// Client-side Convex Hull (Monotone Chain / Graham scan) for interactive dragging with step tracking
 function computeLocalHull(pointsDict) {
   const points = Object.entries(pointsDict).map(([name, [x, y]]) => ({
     name,
@@ -18,12 +18,19 @@ function computeLocalHull(pointsDict) {
   }));
 
   if (points.length <= 3) {
+    const vertices = points.map((p) => p.name);
     return {
-      vertices: points.map((p) => p.name),
+      vertices,
       interior: [],
+      steps: vertices.map((v, i) => ({
+        action: "push",
+        point: v,
+        stack: vertices.slice(0, i + 1),
+      })),
     };
   }
 
+  const steps = [];
   const sorted = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
   const lower = [];
   for (const p of sorted) {
@@ -31,9 +38,19 @@ function computeLocalHull(pointsDict) {
       lower.length >= 2 &&
       crossProduct(lower[lower.length - 2], lower[lower.length - 1], p) <= 0
     ) {
-      lower.pop();
+      const popped = lower.pop();
+      steps.push({
+        action: "pop",
+        point: popped.name,
+        stack: lower.map((pt) => pt.name),
+      });
     }
     lower.push(p);
+    steps.push({
+      action: "push",
+      point: p.name,
+      stack: lower.map((pt) => pt.name),
+    });
   }
 
   const upper = [];
@@ -43,9 +60,19 @@ function computeLocalHull(pointsDict) {
       upper.length >= 2 &&
       crossProduct(upper[upper.length - 2], upper[upper.length - 1], p) <= 0
     ) {
-      upper.pop();
+      const popped = upper.pop();
+      steps.push({
+        action: "pop",
+        point: popped.name,
+        stack: [...lower.slice(0, -1), ...upper].map((pt) => pt.name),
+      });
     }
     upper.push(p);
+    steps.push({
+      action: "push",
+      point: p.name,
+      stack: [...lower.slice(0, -1), ...upper].map((pt) => pt.name),
+    });
   }
 
   lower.pop();
@@ -63,13 +90,30 @@ function computeLocalHull(pointsDict) {
   const vSet = new Set(vertices);
   const interior = points.filter((p) => !vSet.has(p.name)).map((p) => p.name);
 
-  return { vertices, interior };
+  return { vertices, interior, steps };
 }
 
 // Client-side TSP solver (Rounded Euclidean, matching Section 3.2)
 function computeLocalTSP(nodesDict) {
   const labels = Object.keys(nodesDict);
   const n = labels.length;
+  if (n === 0) {
+    return {
+      tour: [],
+      cost: 0,
+      nearest_neighbour: { tour: [], cost: 0 },
+      steps: [],
+    };
+  }
+  if (n === 1) {
+    return {
+      tour: [labels[0], labels[0]],
+      cost: 0,
+      nearest_neighbour: { tour: [labels[0], labels[0]], cost: 0 },
+      steps: [{ node: 1, cost: 0, status: "optimal", subtours: [[labels[0]]], forbidden_arcs: [] }],
+    };
+  }
+
   const matrix = Array.from({ length: n }, () => Array(n).fill(0));
 
   for (let i = 0; i < n; i++) {
@@ -84,7 +128,7 @@ function computeLocalTSP(nodesDict) {
     }
   }
 
-  // Nearest neighbour from Base (index 0)
+  // Nearest neighbour from first label (Base)
   const visited = new Set([0]);
   let curr = 0;
   const nnPath = [0];
@@ -108,7 +152,7 @@ function computeLocalTSP(nodesDict) {
   nnCost += matrix[curr][0];
   nnPath.push(0);
 
-  // Exact Branch-and-bound optimal TSP
+  // Exact Branch-and-bound optimal TSP search
   let bestTour = nnPath.map((idx) => labels[idx]);
   let bestCost = nnCost;
 
@@ -144,6 +188,23 @@ function computeLocalTSP(nodesDict) {
 
   search(0, 1, 0);
 
+  const steps = [
+    {
+      node: 1,
+      cost: nnCost,
+      status: "feasible",
+      subtours: [nnPath.map((idx) => labels[idx])],
+      forbidden_arcs: [],
+    },
+    {
+      node: 2,
+      cost: bestCost,
+      status: "optimal",
+      subtours: [bestTour],
+      forbidden_arcs: [],
+    },
+  ];
+
   return {
     tour: bestTour,
     cost: bestCost,
@@ -151,17 +212,30 @@ function computeLocalTSP(nodesDict) {
       tour: nnPath.map((idx) => labels[idx]),
       cost: nnCost,
     },
+    steps,
   };
+}
+
+function arePointsEqual(ptsA, ptsB) {
+  if (!ptsA || !ptsB) return ptsA === ptsB;
+  const keysA = Object.keys(ptsA);
+  const keysB = Object.keys(ptsB);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every((k) => ptsB[k] && ptsA[k][0] === ptsB[k][0] && ptsA[k][1] === ptsB[k][1]);
 }
 
 export default function MapTab({ scenario }) {
   // Sync coordinates with scenario prop, allow dragging
   const [nodes, setNodes] = useState(scenario?.nodes || {});
   const [loot, setLoot] = useState(scenario?.loot || {});
+  const [liveRouteData, setLiveRouteData] = useState(null);
+  const [liveHullData, setLiveHullData] = useState(null);
 
   useEffect(() => {
     if (scenario?.nodes) setNodes(scenario.nodes);
     if (scenario?.loot) setLoot(scenario.loot);
+    setLiveRouteData(null);
+    setLiveHullData(null);
   }, [scenario]);
 
   // View state
@@ -174,10 +248,20 @@ export default function MapTab({ scenario }) {
 
   const svgRef = useRef(null);
 
-  // Fetch initial hull and route envelopes
   const allPoints = useMemo(() => ({ ...nodes, ...loot }), [nodes, loot]);
-  const labels = useMemo(() => Object.keys(nodes), [nodes]);
 
+  // Check if current coordinates differ from original scenario props
+  const isNodesModified = useMemo(
+    () => !arePointsEqual(nodes, scenario?.nodes),
+    [nodes, scenario?.nodes]
+  );
+  const isLootModified = useMemo(
+    () => !arePointsEqual(loot, scenario?.loot),
+    [loot, scenario?.loot]
+  );
+  const isModified = isNodesModified || isLootModified;
+
+  // Fetch initial scenario hull and route envelopes
   const { loading: hullLoading, error: hullError, data: hullData } = useApi(
     () => api.hull(allPoints),
     [scenario?.nodes, scenario?.loot]
@@ -188,24 +272,79 @@ export default function MapTab({ scenario }) {
     [scenario?.nodes]
   );
 
-  // Compute live values when dragging or when API data is present
+  // Compute live values when dragging
   const localHull = useMemo(() => computeLocalHull(allPoints), [allPoints]);
   const localTSP = useMemo(() => computeLocalTSP(nodes), [nodes]);
 
-  const hullVertices = hullData?.answer?.vertices || localHull.vertices;
-  const hullInterior = hullData?.answer?.interior || localHull.interior;
+  // When points are modified, prioritize live committed API data or immediate local computation
+  const hullVertices = isModified
+    ? (liveHullData?.answer?.vertices || localHull.vertices)
+    : (hullData?.answer?.vertices || localHull.vertices);
 
-  const optimalTour = routeData?.answer?.tour || localTSP.tour;
-  const optimalCost = routeData?.answer?.cost ?? localTSP.cost;
+  const hullInterior = isModified
+    ? (liveHullData?.answer?.interior || localHull.interior)
+    : (hullData?.answer?.interior || localHull.interior);
 
-  const nnTour = routeData?.answer?.nearest_neighbour?.tour || localTSP.nearest_neighbour.tour;
-  const nnCost = routeData?.answer?.nearest_neighbour?.cost ?? localTSP.nearest_neighbour.cost;
+  const hullSteps = isModified
+    ? (liveHullData?.steps || localHull.steps)
+    : (hullData?.steps || localHull.steps);
 
-  // Subtours from first Hungarian pass (Cost 64)
-  const firstSubtours = routeData?.answer?.first_subtours || [
-    ["Base", "C7", "C5", "Base"],
-    ["C1", "C6", "C3", "C4", "C2", "C1"],
-  ];
+  const optimalTour = isNodesModified
+    ? (liveRouteData?.answer?.tour || localTSP.tour)
+    : (routeData?.answer?.tour || localTSP.tour);
+
+  const optimalCost = isNodesModified
+    ? (liveRouteData?.answer?.cost ?? localTSP.cost)
+    : (routeData?.answer?.cost ?? localTSP.cost);
+
+  const nnTour = isNodesModified
+    ? (liveRouteData?.answer?.nearest_neighbour?.tour || localTSP.nearest_neighbour.tour)
+    : (routeData?.answer?.nearest_neighbour?.tour || localTSP.nearest_neighbour.tour);
+
+  const nnCost = isNodesModified
+    ? (liveRouteData?.answer?.nearest_neighbour?.cost ?? localTSP.nearest_neighbour.cost)
+    : (routeData?.answer?.nearest_neighbour?.cost ?? localTSP.nearest_neighbour.cost);
+
+  const routeSteps = isNodesModified
+    ? (liveRouteData?.steps || localTSP.steps)
+    : (routeData?.steps || localTSP.steps);
+
+  const getNodeCoord = (name) => nodes[name] || loot[name] || [0, 0];
+
+  // Subtours from first Hungarian pass
+  const rawSubtours = (isNodesModified && liveRouteData?.answer?.first_subtours)
+    ? liveRouteData.answer.first_subtours
+    : (routeData?.answer?.first_subtours || [
+        ["Base", "C7", "C5"],
+        ["C1", "C6", "C3", "C4", "C2"],
+      ]);
+
+  // Ensure subtours are closed loops and compute individual & total costs dynamically
+  const subtoursInfo = useMemo(() => {
+    return rawSubtours.map((sub, sIdx) => {
+      const closed =
+        sub.length > 0 && sub[sub.length - 1] !== sub[0] ? [...sub, sub[0]] : sub;
+      let cost = 0;
+      for (let i = 0; i < closed.length - 1; i++) {
+        const p1 = getNodeCoord(closed[i]);
+        const p2 = getNodeCoord(closed[i + 1]);
+        cost += Math.round(Math.hypot(p1[0] - p2[0], p1[1] - p2[1]));
+      }
+      return {
+        id: sIdx + 1,
+        closed,
+        cost,
+        path: closed.join(" → "),
+      };
+    });
+  }, [rawSubtours, nodes, loot]);
+
+  const subtourTotalCost = useMemo(() => {
+    if (!isNodesModified && routeData?.answer?.relaxation_cost != null) {
+      return routeData.answer.relaxation_cost;
+    }
+    return subtoursInfo.reduce((acc, sub) => acc + sub.cost, 0);
+  }, [subtoursInfo, isNodesModified, routeData]);
 
   // SVG coordinate transformation
   const viewBoxWidth = 840;
@@ -254,11 +393,17 @@ export default function MapTab({ scenario }) {
 
   const handlePointerMove = (e) => {
     if (!draggedNode || !svgRef.current) return;
+    const clientX = e.clientX ?? e.pageX ?? 0;
+    const clientY = e.clientY ?? e.pageY ?? 0;
     const rect = svgRef.current.getBoundingClientRect();
-    const scaleX = viewBoxWidth / rect.width;
-    const scaleY = viewBoxHeight / rect.height;
-    const svgX = (e.clientX - rect.left) * scaleX;
-    const svgY = (e.clientY - rect.top) * scaleY;
+    const width = rect.width || viewBoxWidth;
+    const height = rect.height || viewBoxHeight;
+    const left = rect.left || 0;
+    const top = rect.top || 0;
+    const scaleX = viewBoxWidth / width;
+    const scaleY = viewBoxHeight / height;
+    const svgX = (clientX - left) * scaleX;
+    const svgY = (clientY - top) * scaleY;
 
     const wx = toWorldX(svgX);
     const wy = toWorldY(svgY);
@@ -272,19 +417,30 @@ export default function MapTab({ scenario }) {
 
   const handlePointerUp = (e) => {
     if (draggedNode) {
+      const active = draggedNode;
       try {
-        e.target.releasePointerCapture(e.pointerId);
+        if (e?.target?.releasePointerCapture && e?.pointerId != null) {
+          e.target.releasePointerCapture(e.pointerId);
+        }
       } catch (_) {}
       setDraggedNode(null);
+
+      // On commit, if coordinates are modified and in live mode, invoke the live backend
+      if (!USE_FIXTURES) {
+        if (!active.isLoot) {
+          api.route({ points: nodes }).then(setLiveRouteData).catch(console.error);
+        }
+        api.hull({ ...nodes, ...loot }).then(setLiveHullData).catch(console.error);
+      }
     }
   };
 
   const handleResetCoordinates = () => {
     if (scenario?.nodes) setNodes(scenario.nodes);
     if (scenario?.loot) setLoot(scenario.loot);
+    setLiveRouteData(null);
+    setLiveHullData(null);
   };
-
-  const getNodeCoord = (name) => nodes[name] || loot[name] || [0, 0];
 
   // Hull polygon points
   const hullPointsString = useMemo(() => {
@@ -297,12 +453,13 @@ export default function MapTab({ scenario }) {
       .join(" ");
   }, [hullVertices, nodes, loot, toSvgX, toSvgY]);
 
-  // Raid time budget calculations (Section 4 Stage 4 dependency)
+  // Raid time budget calculations (Section 4 Stage 4 dependency: minimum 42 min required for feasibility)
   const totalRaidTime = scenario?.total_time ?? 120;
   const optimalTimeLeft = Math.max(0, totalRaidTime - optimalCost);
   const nnTimeLeft = Math.max(0, totalRaidTime - nnCost);
   const timeSaved = nnCost - optimalCost;
-  const timeSavedPercent = nnCost > 0 ? (((nnCost - optimalCost) / nnCost) * 100).toFixed(1) : 0;
+  const timeSavedPercent = nnCost > 0 ? (((nnCost - optimalCost) / nnCost) * 100).toFixed(1) : "0.0";
+  const minFeasibleCraftTime = 42;
 
   return (
     <section className="panel map-tab-panel" aria-label="Map">
@@ -333,14 +490,24 @@ export default function MapTab({ scenario }) {
             <div className="metric-tag">Stage 2 Winner</div>
             <div className="metric-val">{optimalCost} <span className="unit">min</span></div>
             <div className="metric-lbl">Optimal Tour (B&B)</div>
-            <div className="metric-sub">Remaining craft time: <strong>{optimalTimeLeft} min</strong> (Feasible)</div>
+            <div className="metric-sub">
+              Remaining craft time: <strong>{optimalTimeLeft} min</strong>{" "}
+              <span className={optimalTimeLeft >= minFeasibleCraftTime ? "text-ok" : "text-warn"}>
+                ({optimalTimeLeft >= minFeasibleCraftTime ? "Feasible" : "Infeasible"})
+              </span>
+            </div>
           </div>
 
           <div className="metric-box metric-baseline">
             <div className="metric-tag tag-warn">Baseline (-{timeSavedPercent}%)</div>
             <div className="metric-val">{nnCost} <span className="unit">min</span></div>
             <div className="metric-lbl">Nearest Neighbour</div>
-            <div className="metric-sub">Remaining craft time: <strong>{nnTimeLeft} min</strong> (Infeasible)</div>
+            <div className="metric-sub">
+              Remaining craft time: <strong>{nnTimeLeft} min</strong>{" "}
+              <span className={nnTimeLeft >= minFeasibleCraftTime ? "text-ok" : "text-danger"}>
+                ({nnTimeLeft >= minFeasibleCraftTime ? "Feasible" : "Infeasible"})
+              </span>
+            </div>
           </div>
 
           <div className="metric-box metric-savings">
@@ -362,8 +529,11 @@ export default function MapTab({ scenario }) {
         <div className="chaining-callout">
           <span className="callout-icon">⚡</span>
           <div>
-            <strong>Stage 2 feeds Stage 4:</strong> The 120-minute limit leaves <strong>{optimalTimeLeft} min</strong> with the 70-minute optimal tour ($Z = 117$ score).
-            With the 80-minute nearest-neighbour tour, only <strong>{nnTimeLeft} min</strong> remain, making the 14-slot crafting plan <span className="badge-danger">INFEASIBLE</span>.
+            <strong>Stage 2 feeds Stage 4:</strong> The {totalRaidTime}-minute limit leaves <strong>{optimalTimeLeft} min</strong> with the {optimalCost}-minute optimal tour ({optimalTimeLeft >= minFeasibleCraftTime ? "Z = 117 feasible score" : "infeasible crafting plan"}).
+            With the {nnCost}-minute nearest-neighbour tour, only <strong>{nnTimeLeft} min</strong> remain, making the crafting plan{" "}
+            <span className={nnTimeLeft >= minFeasibleCraftTime ? "badge-ok" : "badge-danger"}>
+              {nnTimeLeft >= minFeasibleCraftTime ? "FEASIBLE" : "INFEASIBLE"}
+            </span>.
           </div>
         </div>
 
@@ -377,14 +547,14 @@ export default function MapTab({ scenario }) {
                 className={`segment-tab ${tourMode === "optimal" ? "active" : ""}`}
                 onClick={() => setTourMode("optimal")}
               >
-                Optimal Tour (70m)
+                Optimal Tour ({optimalCost}m)
               </button>
               <button
                 type="button"
                 className={`segment-tab ${tourMode === "nearest_neighbour" ? "active" : ""}`}
                 onClick={() => setTourMode("nearest_neighbour")}
               >
-                Nearest Neighbour (80m)
+                Nearest Neighbour ({nnCost}m)
               </button>
               <button
                 type="button"
@@ -411,7 +581,7 @@ export default function MapTab({ scenario }) {
               onClick={() => setShowSubtours(!showSubtours)}
               title="Show first Hungarian relaxation disjoint subtours"
             >
-              Subtours (64m)
+              Subtours ({subtourTotalCost}m)
             </button>
             <button
               type="button"
@@ -427,15 +597,18 @@ export default function MapTab({ scenario }) {
         {showSubtours && (
           <div className="subtours-explanation-banner">
             <div className="banner-title">
-              ⚠️ Hungarian Relaxation Subtours (Pass 1 Cost: 64 minutes)
+              ⚠️ Hungarian Relaxation Subtours (Pass 1 Cost: {subtourTotalCost} minutes)
             </div>
             <div className="banner-desc">
-              The assignment relaxation without subtour elimination produces 2 disjoint loops:
+              The assignment relaxation without subtour elimination produces {subtoursInfo.length} disjoint loops:
               <ul>
-                <li><strong>Subtour 1 (18m):</strong> Base → C7 → C5 → Base</li>
-                <li><strong>Subtour 2 (46m):</strong> C1 → C6 → C3 → C4 → C2 → C1</li>
+                {subtoursInfo.map((sub) => (
+                  <li key={`subtour-desc-${sub.id}`}>
+                    <strong>Subtour {sub.id} ({sub.cost}m):</strong> {sub.path}
+                  </li>
+                ))}
               </ul>
-              <em>Visual proof that the Hungarian relaxation alone is not a valid tour. Branch-and-bound resolves this to the optimal 70-minute tour.</em>
+              <em>Visual proof that the Hungarian relaxation alone is not a valid tour. Branch-and-bound resolves this to the optimal {optimalCost}-minute tour.</em>
             </div>
           </div>
         )}
@@ -448,8 +621,10 @@ export default function MapTab({ scenario }) {
               ref={svgRef}
               className={`map-svg-canvas ${draggedNode ? "is-dragging" : ""}`}
               viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
+              style={{ touchAction: "none" }}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
               role="img"
               aria-label="Shadow Citadel Raid Map"
             >
@@ -584,17 +759,18 @@ export default function MapTab({ scenario }) {
                 </g>
               )}
 
-              {/* First Hungarian Pass Subtours Overlay */}
+              {/* First Hungarian Pass Subtours Overlay (Closed Loops) */}
               {showSubtours && (
                 <g className="subtours-group">
-                  {firstSubtours.map((subtour, sIdx) => {
+                  {subtoursInfo.map((subInfo, sIdx) => {
                     const color = sIdx === 0 ? "#ef476f" : "#a855f7";
                     const markerId = sIdx === 0 ? "arrow-sub1" : "arrow-sub2";
                     const segments = [];
+                    const closed = subInfo.closed;
 
-                    for (let i = 0; i < subtour.length - 1; i++) {
-                      const p1 = getNodeCoord(subtour[i]);
-                      const p2 = getNodeCoord(subtour[i + 1]);
+                    for (let i = 0; i < closed.length - 1; i++) {
+                      const p1 = getNodeCoord(closed[i]);
+                      const p2 = getNodeCoord(closed[i + 1]);
                       segments.push(
                         <line
                           key={`sub-${sIdx}-seg-${i}`}
@@ -720,7 +896,7 @@ export default function MapTab({ scenario }) {
                         fontFamily="monospace"
                         textAnchor="middle"
                       >
-                        {name} ({x},{y})
+                        {name + " (" + x + "," + y + ")"}
                       </text>
                     </g>
                   );
@@ -789,7 +965,7 @@ export default function MapTab({ scenario }) {
                         fontFamily="monospace"
                         textAnchor="middle"
                       >
-                        {name} ({x},{y})
+                        {name + " (" + x + "," + y + ")"}
                       </text>
                     </g>
                   );
@@ -809,11 +985,11 @@ export default function MapTab({ scenario }) {
                 >
                   <rect x="-40" y="-10" width="80" height="20" rx="4" fill="#0f172a" stroke="#38bdf8" />
                   <text x="0" y="4" fill="#38bdf8" fontSize="10" fontFamily="monospace" textAnchor="middle">
-                    {draggedNode.name}: (
-                    {draggedNode.isLoot
-                      ? `${loot[draggedNode.name][0]}, ${loot[draggedNode.name][1]}`
-                      : `${nodes[draggedNode.name][0]}, ${nodes[draggedNode.name][1]}`}
-                    )
+                    {draggedNode.name + ": (" +
+                      (draggedNode.isLoot
+                        ? loot[draggedNode.name][0] + ", " + loot[draggedNode.name][1]
+                        : nodes[draggedNode.name][0] + ", " + nodes[draggedNode.name][1]) +
+                      ")"}
                   </text>
                 </g>
               )}
@@ -828,8 +1004,8 @@ export default function MapTab({ scenario }) {
             <div className="itinerary-panel">
               <div className="panel-title">
                 {tourMode === "nearest_neighbour"
-                  ? "Nearest Neighbour Itinerary (80 min)"
-                  : "Optimal Tour Itinerary (70 min)"}
+                  ? `Nearest Neighbour Itinerary (${nnCost} min)`
+                  : `Optimal Tour Itinerary (${optimalCost} min)`}
               </div>
 
               <div className="itinerary-table-container">
@@ -898,12 +1074,12 @@ export default function MapTab({ scenario }) {
               </div>
 
               {activeStepType === "tsp" && (
-                <StepPlayer steps={routeData?.steps || []}>
+                <StepPlayer steps={routeSteps || []}>
                   {(step, idx) => (
                     <div className="step-content-card">
                       <div className="step-title-line">
                         <strong>Node {step?.node ?? idx + 1}</strong>: {step?.status?.toUpperCase()}
-                        {step?.cost !== undefined && <span className="step-cost">Cost: {step.cost}m</span>}
+                        {step?.cost != null && <span className="step-cost">Cost: {step.cost}m</span>}
                       </div>
                       {step?.forbidden_arcs?.length > 0 && (
                         <div className="step-sub">
@@ -921,7 +1097,7 @@ export default function MapTab({ scenario }) {
               )}
 
               {activeStepType === "hull" && (
-                <StepPlayer steps={hullData?.steps || []}>
+                <StepPlayer steps={hullSteps || []}>
                   {(step, idx) => (
                     <div className="step-content-card">
                       <div className="step-title-line">
