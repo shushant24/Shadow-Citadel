@@ -28,7 +28,6 @@ def test_route_endpoint_rejects_an_empty_body():
     assert client.post("/api/route", json={}).status_code == 422
 
 
-@pending
 def test_hull_endpoint_matches_fixture(scenario, fixture):
     body = {"points": {**scenario["nodes"], **scenario["loot"]}}
     result = call("POST", "/api/hull", json=body)
