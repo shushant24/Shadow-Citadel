@@ -252,6 +252,28 @@ def test_greedy_assignment_validation_ragged_nan_and_types():
         greedy_assignment([[1, "invalid"], [3, 4]])
 
 
+def test_numpy_scalars_accepted_in_greedy_and_nearest_neighbour():
+    """greedy_assignment and nearest_neighbour accept numpy scalar types (e.g. np.int64, np.float64)."""
+    np = pytest.importorskip("numpy")
+    scores_np = [
+        [np.int64(10), np.int64(20)],
+        [np.int32(30), np.float64(40.0)],
+    ]
+    pairs, total = greedy_assignment(scores_np)
+    assert pairs == [[1, 2], [2, 1]]
+    assert total == 50
+    assert isinstance(total, (int, float))
+
+    matrix_np = [
+        [np.int64(0), np.int64(10)],
+        [np.int64(10), np.int64(0)],
+    ]
+    tour, cost = nearest_neighbour(matrix_np, ["Base", "C1"], start="Base")
+    assert tour == ["Base", "C1", "Base"]
+    assert cost == 20
+    assert isinstance(cost, (int, float))
+
+
 @pending
 def test_experiments_are_reproducible_for_the_same_seed():
     a, b = run_experiments(n_maps=3, seed=5), run_experiments(n_maps=3, seed=5)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import numbers
 from typing import Any, Dict, List, NamedTuple, Optional, Union
 
 
@@ -71,6 +72,7 @@ def nearest_neighbour(
         c = matrix[0][0]
         if not math.isfinite(c):
             raise ValueError(f"Self-loop distance for '{labels[0]}' is not finite: {c}")
+        c = int(c) if float(c).is_integer() else float(c)
         return TourResult([labels[0], labels[0]], c)
 
     visited = {start_idx}
@@ -104,7 +106,8 @@ def nearest_neighbour(
         )
 
     tour_indices.append(start_idx)
-    cost = sum(matrix[tour_indices[i]][tour_indices[i + 1]] for i in range(len(tour_indices) - 1))
+    raw_cost = sum(matrix[tour_indices[i]][tour_indices[i + 1]] for i in range(len(tour_indices) - 1))
+    cost = int(raw_cost) if float(raw_cost).is_integer() else float(raw_cost)
     tour_labels = [labels[idx] for idx in tour_indices]
 
     return TourResult(tour_labels, cost)
@@ -128,7 +131,7 @@ def greedy_assignment(scores: List[List[Union[int, float]]]) -> AssignmentResult
                 f"scores must be rectangular: row {ri} has length {len(row)}, expected {num_cols}."
             )
         for ci, val in enumerate(row):
-            if not isinstance(val, (int, float)) or isinstance(val, bool) or not math.isfinite(val):
+            if not isinstance(val, numbers.Real) or isinstance(val, bool) or not math.isfinite(val):
                 raise ValueError(
                     f"scores[{ri}][{ci}] must be a finite number, got {val!r}."
                 )
@@ -154,7 +157,8 @@ def greedy_assignment(scores: List[List[Union[int, float]]]) -> AssignmentResult
             pairs.append([i + 1, best_col + 1])
             total += best_val
 
-    return AssignmentResult(pairs, total)
+    final_total = int(total) if float(total).is_integer() else float(total)
+    return AssignmentResult(pairs, final_total)
 
 
 def equal_split_crafting(scenario: Dict[str, Any], time_limit: Union[int, float]) -> Optional[CraftingPlan]:
