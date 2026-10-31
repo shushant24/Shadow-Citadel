@@ -1,0 +1,14 @@
+{
+  "status": "infeasible",
+  "method": "bigm",
+  "time_limit": 40,
+  "message": "Crafting plan is infeasible: remaining time (40 min) is insufficient to craft 14 required inventory items. Minimum craft time needed is 42 min (14 items \u00d7 3 min/item for health potions/shield scrolls).",
+  "details": {
+    "requested_time": 40,
+    "min_time_possible": 42,
+    "bottleneck": "craft time and inventory slots conflict",
+    "recommendation": "Optimize TSP route to take <= 78 min to leave >= 42 min for crafting."
+  },
+  "answer": null,
+  "steps": []
+}

@@ -1,0 +1,83 @@
+{
+  "status": "optimal",
+  "method": "bigm",
+  "time_limit": 42,
+  "answer": {
+    "x": [
+      13,
+      0,
+      0,
+      1
+    ],
+    "z": 111,
+    "recipes": {
+      "x1_health_potion": {
+        "name": "Health potion",
+        "count": 13,
+        "unit_score": 8,
+        "total_score": 104
+      },
+      "x2_stamina_potion": {
+        "name": "Stamina potion",
+        "count": 0,
+        "unit_score": 6,
+        "total_score": 0
+      },
+      "x3_damage_elixir": {
+        "name": "Damage elixir",
+        "count": 0,
+        "unit_score": 10,
+        "total_score": 0
+      },
+      "x4_shield_scroll": {
+        "name": "Shield scroll",
+        "count": 1,
+        "unit_score": 7,
+        "total_score": 7
+      }
+    },
+    "resources_used": {
+      "time": {
+        "used": 42,
+        "limit": 42,
+        "binding": true
+      },
+      "weight": {
+        "used": 40,
+        "limit": 40,
+        "binding": true
+      },
+      "stamina": {
+        "used": 55,
+        "limit": 90,
+        "binding": false,
+        "slack": 35
+      },
+      "survival": {
+        "achieved": 68,
+        "min_required": 30,
+        "binding": false,
+        "surplus": 38
+      },
+      "slots": {
+        "used": 14,
+        "limit": 14,
+        "binding": true
+      }
+    },
+    "shadow_prices": {
+      "time": 0.75,
+      "weight": 0.5,
+      "stamina": 0.0,
+      "survival": 0.0,
+      "slots": 4.25
+    },
+    "binding": [
+      "time",
+      "weight",
+      "slots"
+    ],
+    "bottleneck": "craft time"
+  },
+  "steps": []
+}
