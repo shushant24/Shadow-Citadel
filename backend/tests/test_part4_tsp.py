@@ -76,3 +76,13 @@ def test_nearest_neighbour_consistency_with_baselines(time_matrix):
         base_r = nearest_neighbour(m, labels, start="Base")
         assert tsp_r["answer"]["nearest_neighbour"]["cost"] == base_r.cost
         assert tsp_r["answer"]["nearest_neighbour"]["tour"] == base_r.tour
+
+    # 3. Start node where labels[0] is not "Base"
+    m_arb = [[0, 10, 20], [10, 0, 15], [20, 15, 0]]
+    labels_arb = ["C1", "C2", "C3"]
+    tsp_arb = solve_tsp(m_arb, labels_arb)
+    base_arb = nearest_neighbour(m_arb, labels_arb, start=labels_arb[0])
+    assert tsp_arb["answer"]["nearest_neighbour"]["cost"] == base_arb.cost
+    assert tsp_arb["answer"]["nearest_neighbour"]["tour"] == base_arb.tour
+    assert tsp_arb["answer"]["nearest_neighbour"]["tour"][0] == "C1"
+    assert tsp_arb["answer"]["tour"][0] == "C1"
