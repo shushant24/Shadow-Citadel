@@ -1,38 +1,34 @@
-# Shadow Citadel Raid Optimizer
+# Part 6 Research Index: App Shell and Shared Components
 
-CS2105 Optimization Techniques, Option 2 (RPG / Battle Royale raid score optimizer).
-A four-stage pipeline of hand-written solvers: convex hull, TSP (Hungarian + subtour branching), weapon assignment (Hungarian), crafting LP (Big-M / Two-Phase simplex with shadow prices). Demo scenario target: **445 combat + 117 crafting = 562**.
+This directory contains the complete research, architectural design, component specifications, and step-by-step implementation plan for **Part 6** of the **Shadow Citadel Raid Optimizer** project.
 
-Full plan: [`docs/demo_plan.md`](docs/demo_plan.md) · Who builds what: [`docs/parts.md`](docs/parts.md) · JSON contract: [`docs/api-contract.md`](docs/api-contract.md) · Open decisions and defaults: [`docs/decisions.md`](docs/decisions.md) · What changed in this version: [`docs/changes-v2.md`](docs/changes-v2.md)
+---
 
-## Layout
-```
-data/        scenario.json (plan 3.5) and time_matrix.json (plan 3.2, the expected oracle)
-fixtures/    shared mock responses with REAL traces (tableaux, B&B nodes, Hungarian phases); the frontend
-             runs on them, backend tests check against them
-backend/     FastAPI app; solvers/ (hand-written, stubs), api/ (one router per endpoint),
-             contract.py (executable JSON contract, no dependencies)
-frontend/    React + Vite; 4 tabs (Map, Matchups, Loadout, Summary) + shared step player and Status
-docs/        plan, parts/owners, API contract, decisions, report template
-```
+## Quick Navigation
 
-## Quick start
-```bash
-make setup            # venv + pip install, npm install
-make dev-backend      # http://localhost:8000  (docs at /docs)
-make dev-frontend     # http://localhost:5173  (starts on fixtures, no backend needed)
-make test             # pytest + vitest
-```
-Without `make`: `cd backend && python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt && .venv/bin/pytest -q`, and `cd frontend && npm install && npm run dev`.
+| Document | Topic | Description |
+|---|---|---|
+| [01. Requirements & Contract Analysis](01_requirements_and_contract_analysis.md) | Specs & Rules | Deep dive into `parts.md`, `demo_plan.md`, `api-contract.md`, `decisions.md`, and project constraints. |
+| [02. Component Architecture & Data Flow](02_component_architecture_and_data_flow.md) | System Design | Architecture of the App shell, state propagation, tab lifecycle, and API client layer. |
+| [03. Scenario Panel Specification](03_scenario_panel_specification.md) | Component Spec | Full UI/UX specification and schema mapping for the editable `ScenarioPanel`. |
+| [04. Reusable Step Player Specification](04_step_player_specification.md) | Component Spec | Multi-tab replay engine supporting Branch & Bound, Hungarian reduction/covering, and Simplex tableaux. |
+| [05. Status & Theme Design System](05_status_and_theme_specification.md) | Styling & UX | Envelope status handling (infeasible/unbounded), alert roles, and dark gaming aesthetic in `theme.css`. |
+| [06. Testing Strategy & QA](06_testing_strategy_and_quality_assurance.md) | Verification | Vitest + Testing Library test matrix, edge cases, contract assertions, and CI checks. |
+| [07. Step-by-Step Execution Plan](07_step_by_step_execution_plan.md) | Roadmap | Phased implementation roadmap with milestones, deliverables, and PR submission checklist. |
 
-After the first `npm install`, **commit `frontend/package-lock.json`** so everyone (and CI) gets the same versions.
+---
 
-To use the live API instead of fixtures: `cp frontend/.env.example frontend/.env` and set `VITE_USE_FIXTURES=false`. Fixture mode is canned (see "Fixture mode" in the contract): sliders, edits and dragging only recompute against the live backend.
+## Executive Summary of Part 6
 
-## How the test suite guides the work
-- Each part's "Done when" values are written as tests marked `@pending` (a strict expected failure while the solver raises `NotImplementedError`). When your solver is correct the strict marker turns the test red with XPASS: delete `@pending` and it becomes a normal test. A wrong answer fails normally.
-- `tests/test_contract_shapes.py` checks every fixture against `backend/contract.py` and replays the traces (B&B tree, tableau pricing, Hungarian phases). It passes today and must keep passing. **Every endpoint and solver test also validates its output with `check_contract(...)`**, so a format drift fails a test instead of breaking the frontend a week later.
-- `tests/test_data_integrity.py` and `tests/test_no_forbidden_imports.py` guard the shared data and the "no library solvers" rule (checked with `ast`: no scipy / linprog / pulp inside `solvers/` or `api/`; use such tools only as test oracles in `tests/`).
-
-## Status
-All solvers and tabs are stubs. `GET /api/scenario` and `GET /api/health` work; other endpoints return 501 until their part lands. The fixtures and contract are complete, so every tab can be built against realistic data today.
+- **Owner Deliverable:**
+  - `frontend/src/App.jsx`
+  - `frontend/src/api.js`
+  - `frontend/src/components/StepPlayer.jsx`
+  - `frontend/src/components/ScenarioPanel.jsx`
+  - `frontend/src/components/Status.jsx`
+  - `frontend/src/useApi.js`
+  - `frontend/src/theme.css`
+- **Primary Done-When Criteria (`docs/parts.md`):**
+  > "Any tab can plug in a step list and get a working player; editing the scenario updates every tab (`App` already holds the edited scenario; `ScenarioPanel` needs the editable fields); `Status` shows infeasible messages."
+- **Paired Reviewers:** Part 5 (Backend pipeline / geometry), and all Frontend owners (Parts 7, 8, 9, 10).
+- **Core Philosophy:** Part 6 serves as the structural foundation for the entire frontend application. It must be rock-solid, decoupled, responsive, and provide clean abstractions so that Parts 7, 8, 9, and 10 can develop in parallel without blocking each other.
