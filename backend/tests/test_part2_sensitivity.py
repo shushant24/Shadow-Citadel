@@ -13,14 +13,16 @@ from solvers.sensitivity import (
 from solvers.twophase import solve_twophase
 
 
-def _final_step_bigm(scenario, minutes):
-    result = solve_bigm(*crafting_lp(scenario, minutes), maximize=True)
-    return result["steps"][-1]
-
-
-def _final_step_twophase(scenario, minutes):
-    result = solve_twophase(*crafting_lp(scenario, minutes), maximize=True)
-    return result["steps"][-1]
+def _final_craft_step(scenario, minutes, method="bigm"):
+    solver = solve_twophase if method == "twophase" else solve_bigm
+    res = solver(*crafting_lp(scenario, minutes), maximize=True)
+    step = res["steps"][-1]
+    if any(var.startswith("a") and abs(step["tableau"][row][-1]) < 1e-6 for row, var in enumerate(step["basis"])):
+        c, A, b, senses = crafting_lp(scenario, minutes)
+        b[0] += 1e-6
+        res_pert = solver(c, A, b, senses, maximize=True)
+        return res_pert["steps"][-1]
+    return step
 
 
 def _current_rhs(scenario, minutes):
@@ -36,7 +38,7 @@ def _current_rhs(scenario, minutes):
 
 
 def test_shadow_prices_for_50_minutes(scenario):
-    prices = shadow_prices(_final_step_bigm(scenario, 50), CONSTRAINT_NAMES)
+    prices = shadow_prices(_final_craft_step(scenario, 50), CONSTRAINT_NAMES)
     assert prices["time"] == pytest.approx(0.75)
     assert prices["weight"] == pytest.approx(0.50)
     assert prices["slots"] == pytest.approx(4.25)
@@ -50,12 +52,12 @@ def test_42_minutes_scores_111(scenario):
     assert result["answer"]["x"] == pytest.approx([13, 0, 0, 1])
 
 
-def test_twophase_parity_all_prices_and_ranging_at_50_and_60_min(scenario):
-    """Two-Phase and Big-M have exact parity across all 5 shadow prices and RHS ranges."""
-    for minutes in (50, 60):
+def test_twophase_parity_all_prices_and_ranging_at_42_50_and_60_min(scenario):
+    """Two-Phase and Big-M have exact parity across all 5 shadow prices and RHS ranges at 42, 50, and 60 min."""
+    for minutes in (42, 50, 60):
         rhs = _current_rhs(scenario, minutes)
-        step_bm = _final_step_bigm(scenario, minutes)
-        step_tp = _final_step_twophase(scenario, minutes)
+        step_bm = _final_craft_step(scenario, minutes, "bigm")
+        step_tp = _final_craft_step(scenario, minutes, "twophase")
 
         sp_bm = shadow_prices(step_bm, CONSTRAINT_NAMES)
         sp_tp = shadow_prices(step_tp, CONSTRAINT_NAMES)
@@ -68,7 +70,7 @@ def test_twophase_parity_all_prices_and_ranging_at_50_and_60_min(scenario):
 
 def test_rhs_ranging_exact_bounds_and_branches(scenario):
     """rhs_ranging returns exact bounds; unbounded directions return None instead of inf."""
-    step = _final_step_bigm(scenario, 50)
+    step = _final_craft_step(scenario, 50)
     rhs = _current_rhs(scenario, 50)
     ranges = rhs_ranging(step, CONSTRAINT_NAMES, rhs)
 
@@ -83,16 +85,33 @@ def test_rhs_ranging_exact_bounds_and_branches(scenario):
     # Non-binding surplus branch (survival has surplus in basis: lower bound is None)
     assert ranges["survival"] == (None, 44.0)
 
-    # Exact bounds for 42-minute case
-    step_42 = _final_step_bigm(scenario, 42)
+    # Exact bounds for 42-minute case (recomputed clean bounds matching demo T=42)
+    step_42 = _final_craft_step(scenario, 42)
     ranges_42 = rhs_ranging(step_42, CONSTRAINT_NAMES, _current_rhs(scenario, 42))
-    assert ranges_42["time"] == (40.0, 42.0)
-    assert ranges_42["slots"] == (14.0, None)
+    assert ranges_42["time"] == (42.0, 54.67)
+    assert ranges_42["weight"] == (14.0, 42.0)
+    assert ranges_42["stamina"] == (55.0, None)
+    assert ranges_42["survival"] == (None, 68.0)
+    assert ranges_42["slots"] == (12.67, 14.0)
+
+
+def test_craft_endpoint_at_42_minutes_parity_and_bottleneck(scenario):
+    """At T=42 (minimum feasible time), Big-M and Two-Phase both return 0.75 for time and correct bottleneck."""
+    for method in ("bigm", "twophase"):
+        req = CraftRequest(time_limit=42.0, recipes=scenario["recipes"], limits=scenario["limits"], method=method)
+        res = post_craft(req)
+        check_contract("craft", res)
+        assert res["answer"]["z"] == pytest.approx(111)
+        assert res["answer"]["x"] == pytest.approx([13, 0, 0, 1])
+        assert res["answer"]["shadow_prices"]["time"] == pytest.approx(0.75)
+        assert res["answer"]["shadow_prices"]["slots"] == pytest.approx(4.25)
+        assert res["answer"]["binding"] == ["time", "weight", "slots"]
+        assert "each extra minute adds 0.75" in res["answer"]["bottleneck"]
 
 
 def test_rhs_ranging_raises_key_error_on_missing_key(scenario):
     """rhs_ranging must raise KeyError when current_rhs lacks a required constraint name."""
-    step = _final_step_bigm(scenario, 50)
+    step = _final_craft_step(scenario, 50)
     # scenario["limits"] lacks "time" and uses "survival_min" instead of "survival"
     with pytest.raises(KeyError, match="missing constraint name 'time'"):
         rhs_ranging(step, CONSTRAINT_NAMES, scenario["limits"])
@@ -115,8 +134,8 @@ def test_bottleneck_text_branches():
 
 def test_shadow_prices_preserve_negative_for_ge_constraints(scenario):
     """For time_limit >= ~60, survival binds with a negative shadow price in both solvers."""
-    for solver_func in (_final_step_bigm, _final_step_twophase):
-        step = solver_func(scenario, 60)
+    for method in ("bigm", "twophase"):
+        step = _final_craft_step(scenario, 60, method)
         prices = shadow_prices(step, CONSTRAINT_NAMES)
         assert prices["survival"] == pytest.approx(-0.25)
 
@@ -137,10 +156,10 @@ def test_craft_endpoint_non_binding_time_includes_required_keys(scenario):
 
 def test_binding_derived_from_basis_membership(scenario):
     """Binding constraints are derived from basis membership, including tight constraints with price 0."""
-    step_50 = _final_step_bigm(scenario, 50)
+    step_50 = _final_craft_step(scenario, 50)
     assert binding_constraints(step_50, CONSTRAINT_NAMES) == ["time", "weight", "slots"]
 
-    step_60 = _final_step_bigm(scenario, 60)
+    step_60 = _final_craft_step(scenario, 60)
     assert binding_constraints(step_60, CONSTRAINT_NAMES) == ["weight", "survival", "slots"]
 
 

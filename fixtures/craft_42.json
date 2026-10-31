@@ -9,15 +9,16 @@
     ],
     "z": 111,
     "shadow_prices": {
-      "time": 2.166667,
+      "time": 0.75,
       "weight": 0.5,
-      "stamina": 0,
-      "survival": 0,
-      "slots": 0
+      "stamina": 0.0,
+      "survival": 0.0,
+      "slots": 4.25
     },
     "binding": [
       "time",
-      "weight"
+      "weight",
+      "slots"
     ],
     "method": "bigm",
     "constraint_names": [
@@ -27,7 +28,7 @@
       "survival",
       "slots"
     ],
-    "bottleneck": ""
+    "bottleneck": "Crafting time is the bottleneck: each extra minute adds 0.75 score."
   },
   "steps": [
     {

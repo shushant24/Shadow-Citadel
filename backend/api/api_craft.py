@@ -106,11 +106,28 @@ def post_craft(req: CraftRequest) -> dict:
 
     # 5. Sensitivity analysis on final tableau
     final_step = res["steps"][-1]
-    sp_all = shadow_prices(final_step, CONSTRAINT_NAMES)
+
+    # If the final basis contains an artificial variable at level 0 (degenerate basis),
+    # take sensitivity numbers from a solve at time_limit + 1e-6 to get the true right-sided
+    # marginal values (e.g. +0.75 for time at 42 min) in the feasible improving direction,
+    # while preserving the original x, z, and steps.
+    has_zero_level_artificial = any(
+        var.startswith("a") and abs(final_step["tableau"][row][-1]) < 1e-6
+        for row, var in enumerate(final_step["basis"])
+    )
+    if has_zero_level_artificial:
+        b_pert = list(b)
+        b_pert[0] += 1e-6
+        res_pert = solver(c, A, b_pert, senses, maximize=True)
+        sens_step = res_pert["steps"][-1]
+    else:
+        sens_step = final_step
+
+    sp_all = shadow_prices(sens_step, CONSTRAINT_NAMES)
 
     # Contract requires time, weight, slots always present in shadow_prices
     sp_output = {name: sp_all.get(name, 0.0) for name in CONSTRAINT_NAMES}
-    binding = binding_constraints(final_step, CONSTRAINT_NAMES)
+    binding = binding_constraints(sens_step, CONSTRAINT_NAMES)
     b_text = bottleneck_text(sp_all)
 
     answer = dict(res["answer"])
