@@ -28,7 +28,6 @@ def test_route_endpoint_rejects_an_empty_body():
     assert client.post("/api/route", json={}).status_code == 422
 
 
-@pending
 def test_hull_endpoint_matches_fixture(scenario, fixture):
     body = {"points": {**scenario["nodes"], **scenario["loot"]}}
     result = call("POST", "/api/hull", json=body)
@@ -50,14 +49,14 @@ def test_route_endpoint_accepts_points_instead_of_a_matrix(scenario):
     assert result["answer"]["cost"] == 70
 
 
-@pending
+
 def test_assign_endpoint_matches_fixture(scenario, fixture):
     result = call("POST", "/api/assign", json={"scores": scenario["weapon_boss_scores"], "maximize": True})
     check_contract("assign", result)
     assert result["answer"]["total"] == fixture("assign")["answer"]["total"]
 
 
-@pending
+
 def test_assign_endpoint_handles_an_unbalanced_matrix(scenario):
     scores = [row[:4] for row in scenario["weapon_boss_scores"]]
     result = call("POST", "/api/assign", json={"scores": scores, "maximize": True})
@@ -65,7 +64,14 @@ def test_assign_endpoint_handles_an_unbalanced_matrix(scenario):
     assert result["answer"]["total"] == 385
 
 
-@pending
+def test_assign_endpoint_rejects_invalid_inputs():
+    assert client.post("/api/assign", json={}).status_code == 422
+    assert client.post("/api/assign", content=b'{"scores": [[NaN]]}', headers={"Content-Type": "application/json"}).status_code == 422
+    assert client.post("/api/assign", content=b'{"scores": [[Infinity]]}', headers={"Content-Type": "application/json"}).status_code == 422
+    assert client.post("/api/assign", content=b'{"scores": [[-Infinity]]}', headers={"Content-Type": "application/json"}).status_code == 422
+    assert client.post("/api/assign", content=b'{"scores": [[1e999]]}', headers={"Content-Type": "application/json"}).status_code == 422
+
+
 def test_craft_endpoint_matches_fixture(scenario, fixture):
     body = {"time_limit": 50, "recipes": scenario["recipes"], "limits": scenario["limits"], "method": "bigm"}
     result = call("POST", "/api/craft", json=body)
@@ -75,7 +81,6 @@ def test_craft_endpoint_matches_fixture(scenario, fixture):
     assert result["answer"]["shadow_prices"]["slots"] == pytest.approx(4.25)
 
 
-@pending
 def test_craft_endpoint_both_methods_and_the_special_cases(scenario):
     base = {"recipes": scenario["recipes"], "limits": scenario["limits"]}
     for method in ("bigm", "twophase"):
@@ -85,6 +90,16 @@ def test_craft_endpoint_both_methods_and_the_special_cases(scenario):
         r40 = call("POST", "/api/craft", json={**base, "time_limit": 40, "method": method})
         check_contract("craft", r40)
         assert r40["status"] == "infeasible" and r40["answer"]["message"]
+
+
+def test_craft_endpoint_rejects_invalid_inputs(scenario):
+    assert client.post("/api/craft", json={}).status_code == 422
+    assert client.post("/api/craft", json={"time_limit": -5.0, "recipes": scenario["recipes"], "limits": scenario["limits"]}).status_code == 422
+    assert client.post("/api/craft", content=b'{"time_limit": NaN, "recipes": {}, "limits": {}}', headers={"Content-Type": "application/json"}).status_code == 422
+    assert client.post("/api/craft", content=b'{"time_limit": Infinity, "recipes": {}, "limits": {}}', headers={"Content-Type": "application/json"}).status_code == 422
+    assert client.post("/api/craft", json={"time_limit": 50.0, "recipes": {"score": [1.0]}, "limits": scenario["limits"]}).status_code == 422
+    huge_recipes = {k: [1.0] * 55 for k in scenario["recipes"]}
+    assert client.post("/api/craft", json={"time_limit": 50.0, "recipes": huge_recipes, "limits": scenario["limits"]}).status_code == 422
 
 
 @pending
