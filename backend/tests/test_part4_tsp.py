@@ -54,3 +54,25 @@ def test_a_matrix_whose_assignment_is_already_one_tour_needs_no_branching():
     result = solve_tsp(m, ["A", "B", "C"])
     assert result["answer"]["cost"] == result["answer"]["relaxation_cost"] == 3
     assert len(result["steps"]) == 1 and result["steps"][0]["status"] == "feasible"
+
+
+def test_nearest_neighbour_consistency_with_baselines(time_matrix):
+    """solve_tsp's nearest_neighbour answer matches solvers.baselines.nearest_neighbour."""
+    from solvers.baselines import nearest_neighbour
+
+    # 1. Demo matrix
+    tsp_res = solve_tsp(time_matrix["matrix"], time_matrix["labels"])
+    baseline_res = nearest_neighbour(time_matrix["matrix"], time_matrix["labels"], start="Base")
+    assert tsp_res["answer"]["nearest_neighbour"]["cost"] == baseline_res.cost
+    assert tsp_res["answer"]["nearest_neighbour"]["tour"] == baseline_res.tour
+
+    # 2. Seeded random matrices
+    rng = random.Random(42)
+    for _ in range(5):
+        n = 8
+        m = [[0 if i == j else rng.randint(5, 50) for j in range(n)] for i in range(n)]
+        labels = ["Base"] + [f"C{i}" for i in range(1, n)]
+        tsp_r = solve_tsp(m, labels)
+        base_r = nearest_neighbour(m, labels, start="Base")
+        assert tsp_r["answer"]["nearest_neighbour"]["cost"] == base_r.cost
+        assert tsp_r["answer"]["nearest_neighbour"]["tour"] == base_r.tour

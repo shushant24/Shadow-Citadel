@@ -291,3 +291,14 @@ def test_valid_coordinates(monkeypatch):
 
     assert result["status"] == "optimal"
     assert result["answer"]["cost"] == 20
+
+
+def test_real_points_path_with_demo_coordinates(scenario):
+    """POST demo coordinates directly without mocking time_matrix, exercising M4 to M5 link."""
+    response = client.post(URL, json={"points": scenario["nodes"]})
+    assert response.status_code == 200
+    result = response.json()
+    assert result["status"] == "optimal"
+    assert result["answer"]["cost"] == 70
+    assert result["answer"]["nearest_neighbour"]["cost"] == 80
+    assert result["answer"]["tour"][0] == result["answer"]["tour"][-1] == "Base"

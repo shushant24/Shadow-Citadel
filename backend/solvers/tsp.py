@@ -95,17 +95,23 @@ def _cycle_arcs(cyc):
 
 
 def nearest_neighbour_tour(matrix, labels):
-    """Greedy baseline from labels[0]: always go to the cheapest unvisited node."""
-    n = len(matrix)
-    order, seen = [0], {0}
-    while len(order) < n:
-        here = order[-1]
-        nxt = min((j for j in range(n) if j not in seen), key=lambda j: (matrix[here][j], j))
-        order.append(nxt)
-        seen.add(nxt)
-    order.append(0)
-    cost = sum(matrix[a][b] for a, b in zip(order, order[1:]))
-    return {"tour": [labels[i] for i in order], "cost": cost}
+    """Greedy baseline: always go to the cheapest unvisited node."""
+    try:
+        from solvers.baselines import nearest_neighbour
+        start = "Base" if (labels and "Base" in labels) else (labels[0] if labels else "Base")
+        res = nearest_neighbour(matrix, labels, start=start)
+        return {"tour": res.tour, "cost": res.cost}
+    except Exception:
+        n = len(matrix)
+        order, seen = [0], {0}
+        while len(order) < n:
+            here = order[-1]
+            nxt = min((j for j in range(n) if j not in seen), key=lambda j: (matrix[here][j], j))
+            order.append(nxt)
+            seen.add(nxt)
+        order.append(0)
+        cost = sum(matrix[a][b] for a, b in zip(order, order[1:]))
+        return {"tour": [labels[i] for i in order], "cost": cost}
 
 
 def solve_tsp(matrix, labels=None, assign_fn=None, nn_fn=None):
