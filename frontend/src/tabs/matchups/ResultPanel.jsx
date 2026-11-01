@@ -57,53 +57,22 @@ export default function ResultPanel({ answer, originalScores, maximize = true, o
     const ratio = range > 0 ? (score - minVal) / range : 0.5;
 
     if (maximize) {
-      // Top tier (>= 67% of range): Emerald / High damage
       if (ratio >= 0.67) {
-        return (
-          <span className="font-mono font-extrabold text-xs text-emerald-300 bg-emerald-950/80 border border-emerald-500/60 px-2 py-0.5 rounded-md shadow-sm">
-            +{score} pts
-          </span>
-        );
+        return <span className="score-badge score-badge-high">+{score} pts</span>;
       }
-      // Mid tier (>= 33% of range): Amber / Medium damage
       if (ratio >= 0.33) {
-        return (
-          <span className="font-mono font-bold text-xs text-amber-300 bg-amber-950/80 border border-amber-500/60 px-2 py-0.5 rounded-md">
-            +{score} pts
-          </span>
-        );
+        return <span className="score-badge score-badge-mid">+{score} pts</span>;
       }
-      // Lower tier: Cyan / Base damage
-      return (
-        <span className="font-mono font-medium text-xs text-cyan-300 bg-cyan-950/80 border border-cyan-500/60 px-2 py-0.5 rounded-md">
-          +{score} pts
-        </span>
-      );
+      return <span className="score-badge score-badge-low">+{score} pts</span>;
     }
 
-    // Minimization mode (costs: lower is better)
-    // Best tier (<= 33% of cost range): Emerald
     if (ratio <= 0.33) {
-      return (
-        <span className="font-mono font-extrabold text-xs text-emerald-300 bg-emerald-950/80 border border-emerald-500/60 px-2 py-0.5 rounded-md shadow-sm">
-          {score} cost
-        </span>
-      );
+      return <span className="score-badge score-badge-high">{score} cost</span>;
     }
-    // Mid tier (<= 67% of cost range): Amber
     if (ratio <= 0.67) {
-      return (
-        <span className="font-mono font-bold text-xs text-amber-300 bg-amber-950/80 border border-amber-500/60 px-2 py-0.5 rounded-md">
-          {score} cost
-        </span>
-      );
+      return <span className="score-badge score-badge-mid">{score} cost</span>;
     }
-    // High cost tier (> 67%): Red / High cost
-    return (
-      <span className="font-mono font-semibold text-xs text-red-300 bg-red-950/80 border border-red-500/60 px-2 py-0.5 rounded-md">
-        {score} cost
-      </span>
-    );
+    return <span className="score-badge" style={{ background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid rgba(239, 71, 111, 0.3)' }}>{score} cost</span>;
   }
 
   function getOriginalScore(row, col) {
@@ -136,51 +105,49 @@ export default function ResultPanel({ answer, originalScores, maximize = true, o
   }
 
   return (
-    <div className="bg-[var(--panel,#171e2e)] rounded-xl p-4 border border-[var(--panel-border,#2a3449)] shadow-xl space-y-3">
+    <div className="stat-card" style={{ gap: '14px' }}>
       {/* Title & Score Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-[var(--panel-border,#2a3449)]">
-        <div className="flex items-center gap-2">
-          <span className="text-xl p-1.5 rounded-lg bg-[var(--accent-glow,rgba(76,201,240,0.15))] border border-[var(--accent,#4cc9f0)]/30">⚔️</span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px', paddingBottom: '10px', borderBottom: '1px solid var(--panel-border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '1.3rem' }}>⚔️</span>
           <div>
-            <h2 className="text-base font-black text-slate-100 tracking-wide">
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-bright)' }}>
               {maximize ? 'Optimal Combat Assignment' : 'Minimum Cost Matching'}
-            </h2>
-            <p className="text-[11px] text-slate-400">Hungarian method global optimum reached</p>
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted)' }}>
+              Hungarian method global optimum reached
+            </p>
           </div>
         </div>
 
         {/* Total Score Badge */}
-        <div className="flex items-center gap-2.5 bg-slate-950/80 border border-[var(--accent,#4cc9f0)]/50 rounded-lg px-3.5 py-1.5 shadow-[0_0_15px_rgba(76,201,240,0.15)]">
-          <span className="text-[11px] uppercase font-extrabold tracking-wider text-[var(--accent,#4cc9f0)]">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-dark)', border: '1px solid var(--accent)', borderRadius: 'var(--radius-sm)', padding: '6px 14px', boxShadow: '0 0 10px var(--accent-glow)' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--accent)' }}>
             {maximize ? 'Total Score' : 'Total Cost'}
           </span>
-          <span className="text-2xl font-black text-white font-mono tracking-tight">
+          <span style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-bright)', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
             {total}
           </span>
         </div>
       </div>
 
       {/* Assignment Pairs Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-2">
+      <div className="pairs-grid">
         {pairsInfo.map(({ row, col, benched }, i) => {
           const score = benched ? null : getOriginalScore(row, col);
           return (
             <div
               key={`w-pair-${i}`}
-              className={`flex items-center justify-between gap-2 whitespace-nowrap px-3 py-2 rounded-lg border text-xs transition-all ${
-                benched
-                  ? 'bg-slate-950/60 border-slate-700/60 opacity-80'
-                  : 'bg-slate-800/80 border-slate-700/80 hover:border-[var(--accent,#4cc9f0)]/50'
-              }`}
+              className={`pair-card ${benched ? 'benched' : ''}`}
             >
-              <div className="flex items-center gap-1.5">
-                <span className="w-5 h-5 rounded bg-[var(--accent,#4cc9f0)]/20 text-[var(--accent,#4cc9f0)] font-black text-[10px] flex items-center justify-center">
+              <div className="pair-names">
+                <span className="badge badge-accent" style={{ padding: '2px 6px', fontSize: '0.75rem' }}>
                   W{row + 1}
                 </span>
-                <span className="text-slate-400 text-[10px]">➔</span>
-                <span className="font-bold text-slate-200">
+                <span className="pair-arrow">➔</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-bright)' }}>
                   {benched ? (
-                    <span className="text-slate-400 italic">Benched</span>
+                    <span style={{ color: 'var(--muted)', fontStyle: 'italic', fontWeight: 'normal' }}>Benched</span>
                   ) : (
                     `Boss ${col + 1}`
                   )}
@@ -189,7 +156,7 @@ export default function ResultPanel({ answer, originalScores, maximize = true, o
 
               <div>
                 {benched ? (
-                  <span className="text-[10px] text-slate-400 font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800">
+                  <span className="badge badge-muted">
                     Benched
                   </span>
                 ) : (
@@ -204,15 +171,15 @@ export default function ResultPanel({ answer, originalScores, maximize = true, o
         {unassignedCols.map((col, i) => (
           <div
             key={`unassigned-boss-${i}`}
-            className="flex items-center justify-between gap-2 whitespace-nowrap px-3 py-2 rounded-lg border border-slate-700/60 bg-slate-950/60 text-xs opacity-80"
+            className="pair-card benched"
           >
-            <div className="flex items-center gap-1.5">
-              <span className="w-5 h-5 rounded bg-slate-800 text-slate-400 font-black text-[10px] flex items-center justify-center">
+            <div className="pair-names">
+              <span className="badge badge-muted" style={{ padding: '2px 6px', fontSize: '0.75rem' }}>
                 B{col + 1}
               </span>
-              <span className="font-medium text-slate-400 italic">Unassigned</span>
+              <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Unassigned</span>
             </div>
-            <span className="text-[10px] text-slate-400 font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800">
+            <span className="badge badge-muted">
               No Weapon
             </span>
           </div>
@@ -220,8 +187,8 @@ export default function ResultPanel({ answer, originalScores, maximize = true, o
       </div>
 
       {/* Footer with Benchmark Comparison and Step Toggle */}
-      <div className="flex flex-wrap items-center justify-between pt-2 border-t border-[var(--panel-border,#2a3449)] text-xs text-slate-400 gap-2">
-        <span className="text-[var(--warn,#ffd166)] flex items-center gap-1 font-medium text-[11px]">
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '10px', borderTop: '1px solid var(--panel-border)' }}>
+        <span style={{ color: 'var(--warn)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
           <span>✨</span>
           {summaryText}
         </span>
@@ -229,9 +196,9 @@ export default function ResultPanel({ answer, originalScores, maximize = true, o
         <button
           type="button"
           onClick={onViewSteps}
-          className="px-3 py-1 rounded-lg bg-[var(--accent,#4cc9f0)]/15 hover:bg-[var(--accent,#4cc9f0)]/25 text-[var(--accent,#4cc9f0)] font-bold border border-[var(--accent,#4cc9f0)]/40 transition-all flex items-center gap-1 shadow-sm cursor-pointer text-xs"
+          className="btn btn-secondary btn-sm"
         >
-          <span>{stepsShown ? '▲ Hide Steps' : '▼ View Steps'}</span>
+          {stepsShown ? '▲ Hide Steps' : '▼ View Steps'}
         </button>
       </div>
     </div>

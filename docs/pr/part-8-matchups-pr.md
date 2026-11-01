@@ -18,12 +18,12 @@ Matchups tab: editable score grid, Solve, result panel with greedy comparison, a
 | `fixtures/assign_4x5.json`, `fixtures/assign_adjust_min.json` | new fixtures (both match the live backend output) | cover 4x5 and minimize cases |
 | `backend/tests/test_contract_shapes.py` | both fixtures added to `KINDS`; new `test_wide_and_minimize_assign_fixtures` | registered under the assign shape |
 | `backend/tests/test_data_integrity.py` | both fixtures added to the envelope list | same |
-| `frontend/package.json`, `frontend/package-lock.json`, `frontend/vite.config.js`, `frontend/src/theme.css` | adds Tailwind CSS v4 (`tailwindcss`, `@tailwindcss/vite`, one plugin line, `@import "tailwindcss"`) | the Matchups tab is styled with Tailwind utilities; main does not have Tailwind yet |
+| `frontend/package.json`, `frontend/package-lock.json`, `frontend/vite.config.js`, `frontend/src/theme.css` | drops Tailwind CSS v4 in favor of semantic `theme.css` classes | avoids global reset / Preflight conflicts with other tabs and keeps bundle size minimal |
 | `docs/api-contract.md` | fixtures list updated | same |
-| `docs/decisions.md` | rows 11 (Tailwind) and 12 (fixture routing) | shared files were changed without a log entry |
+| `docs/decisions.md` | rows 11 (CSS decision) and 12 (fixture routing) | shared files were changed without a log entry |
 
 ## Open items
-- **Tailwind (decisions row 11):** this PR adds it. Tailwind's base reset is global, so please look at the other tabs once after merging. Needs team confirmation.
+- **Tailwind (decisions row 11):** dropped completely following review to prevent global reset conflicts; Matchups restyled in vanilla `theme.css`.
 - **Grid to Scenario panel sync:** `App.jsx` does not pass `onScoresChange`, and `ScenarioPanel` has no editor for `weapon_boss_scores`. The tab already calls `onScoresChange` if given. This is a Part 6 decision and is not part of this PR.
 - **Part 10:** the values to expect (445, 414, 385, 349, 17, 116) are in report section 7.2; to be confirmed with Part 10.
 - Phone width: the step matrix still scrolls sideways.

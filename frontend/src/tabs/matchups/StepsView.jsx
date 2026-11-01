@@ -49,24 +49,28 @@ export default function StepsView({
   }, [steps, originalScores, notes.original, notes.convert]);
 
   return (
-    <div className="bg-[var(--panel,#171e2e)] rounded-xl shadow-lg overflow-hidden border border-[var(--panel-border,#2a3449)]">
+    <div className="steps-replay-box">
       {/* Toggle header */}
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-slate-700/30 transition cursor-pointer"
+        className="steps-replay-toggle"
         aria-expanded={show}
       >
-        <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>🔍</span>
           <span>Step-by-Step Replay</span>
-          <span className="text-[11px] text-slate-400 font-normal">({displaySteps.length} steps)</span>
+          <span style={{ fontSize: '0.78rem', color: 'var(--muted)', fontWeight: 'normal' }}>
+            ({displaySteps.length} steps)
+          </span>
         </span>
-        <span className="text-[var(--accent,#4cc9f0)] text-xs font-bold">{show ? '▲ Hide Steps' : '▼ View Steps'}</span>
+        <span style={{ color: 'var(--accent)', fontSize: '0.82rem', fontWeight: 700 }}>
+          {show ? '▲ Hide Steps' : '▼ View Steps'}
+        </span>
       </button>
 
       {show && (
-        <div className="px-2 sm:px-4 pb-4 pt-1 [&_.step-controls]:flex-wrap [&_.btn-group]:flex-wrap [&_.speed-control]:flex-wrap [&_.speed-control]:gap-y-1">
+        <div style={{ padding: '12px' }}>
           <StepPlayer steps={displaySteps} showScrubber={false} showNote={false}>
             {(step) => (
               <MatrixView

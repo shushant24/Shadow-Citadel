@@ -157,15 +157,16 @@ export default function ScoreGrid({
   }
 
   return (
-    <div className="bg-[var(--panel,#171e2e)] border border-[var(--panel-border,#2a3449)] rounded-xl p-4 shadow-lg space-y-3">
+    <div className="stat-card" style={{ gap: '14px' }}>
       {/* Controls bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="matchups-toolbar">
+        <div className="toolbar-group">
           {/* Preset dropdown */}
           <select
             value={preset}
             onChange={(e) => handlePreset(e.target.value)}
-            className="bg-slate-700/80 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 border border-slate-600 focus:ring-2 focus:ring-[var(--accent,#4cc9f0)] focus:outline-none"
+            className="form-input"
+            style={{ fontSize: '0.8rem', padding: '4px 10px' }}
           >
             {Object.entries(PRESETS).map(([key, { label }]) => (
               <option key={key} value={key}>{label}</option>
@@ -174,7 +175,7 @@ export default function ScoreGrid({
           </select>
 
           {/* Maximize toggle */}
-          <label className="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none bg-slate-700/50 px-2 py-1 rounded-lg hover:bg-slate-700/80 transition">
+          <label className="inline-group" style={{ fontSize: '0.82rem', cursor: 'pointer', userSelect: 'none' }}>
             <input
               type="checkbox"
               checked={maximize}
@@ -182,23 +183,23 @@ export default function ScoreGrid({
                 setMaximize(e.target.checked);
                 notifyEdit(matrix);
               }}
-              className="w-3.5 h-3.5 accent-[var(--accent,#4cc9f0)]"
+              style={{ accentColor: 'var(--accent)' }}
             />
-            <span className="font-medium">Maximize</span>
+            <span style={{ fontWeight: 600 }}>Maximize</span>
           </label>
 
           {/* Size controls */}
-          <div className="flex items-center gap-1 text-xs text-slate-400 bg-slate-700/50 px-2 py-1 rounded-lg">
+          <div className="size-pill">
             <span>Rows:</span>
-            <button type="button" onClick={removeRow} disabled={rows <= 1} className="w-5 h-5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 flex items-center justify-center font-bold text-slate-200 cursor-pointer">−</button>
-            <span className="w-4 text-center text-slate-200 font-bold">{rows}</span>
-            <button type="button" onClick={addRow} disabled={rows >= 8} className="w-5 h-5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 flex items-center justify-center font-bold text-slate-200 cursor-pointer">+</button>
+            <button type="button" onClick={removeRow} disabled={rows <= 1} title="Remove row">−</button>
+            <span className="size-value">{rows}</span>
+            <button type="button" onClick={addRow} disabled={rows >= 8} title="Add row">+</button>
           </div>
-          <div className="flex items-center gap-1 text-xs text-slate-400 bg-slate-700/50 px-2 py-1 rounded-lg">
+          <div className="size-pill">
             <span>Cols:</span>
-            <button type="button" onClick={removeCol} disabled={cols <= 1} className="w-5 h-5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 flex items-center justify-center font-bold text-slate-200 cursor-pointer">−</button>
-            <span className="w-4 text-center text-slate-200 font-bold">{cols}</span>
-            <button type="button" onClick={addCol} disabled={cols >= 8} className="w-5 h-5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 flex items-center justify-center font-bold text-slate-200 cursor-pointer">+</button>
+            <button type="button" onClick={removeCol} disabled={cols <= 1} title="Remove column">−</button>
+            <span className="size-value">{cols}</span>
+            <button type="button" onClick={addCol} disabled={cols >= 8} title="Add column">+</button>
           </div>
         </div>
 
@@ -206,7 +207,7 @@ export default function ScoreGrid({
         <button
           type="button"
           onClick={handleReset}
-          className="text-xs text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+          className="btn btn-secondary btn-sm"
           title="Reset to default preset"
         >
           ↺ Reset
@@ -214,13 +215,13 @@ export default function ScoreGrid({
       </div>
 
       {/* Grid */}
-      <div className="overflow-x-auto">
-        <table className="border-collapse">
+      <div className="matrix-grid-container">
+        <table className="matrix-grid-table">
           <thead>
             <tr>
-              <th className="w-12 h-6 text-[11px] font-normal text-slate-500"></th>
+              <th style={{ width: '48px' }}></th>
               {Array.from({ length: cols }, (_, c) => (
-                <th key={c} className="w-14 h-6 text-[11px] font-semibold text-slate-400 text-center font-mono">
+                <th key={c} style={{ width: '56px' }}>
                   B{c + 1}
                 </th>
               ))}
@@ -229,11 +230,11 @@ export default function ScoreGrid({
           <tbody>
             {matrix.map((row, r) => (
               <tr key={r}>
-                <td className="w-12 h-10 text-[11px] font-semibold text-slate-400 text-right pr-2 font-mono">
+                <td className="row-label">
                   W{r + 1}
                 </td>
                 {row.map((val, c) => (
-                  <td key={c} className="p-0.5">
+                  <td key={c}>
                     <Cell
                       value={val}
                       label={`Weapon ${r + 1} vs Boss ${c + 1}`}
@@ -258,7 +259,7 @@ export default function ScoreGrid({
 
       {/* Validation error message */}
       {!valid && (
-        <p className="text-xs text-red-400 font-medium">
+        <p className="error" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
           Cells must be whole numbers between 0 and 999. Fix highlighted cells to solve.
         </p>
       )}
@@ -270,7 +271,8 @@ export default function ScoreGrid({
           onClick={handleSolve}
           disabled={!valid || loading}
           title="Solve assignment (or press Enter)"
-          className="w-full py-2.5 px-4 rounded-lg font-bold text-xs uppercase tracking-wide bg-[var(--accent,#4cc9f0)] hover:bg-[var(--accent-hover,#3ab0d6)] text-slate-950 disabled:opacity-40 disabled:hover:bg-[var(--accent,#4cc9f0)] transition cursor-pointer shadow-md"
+          className="btn btn-primary"
+          style={{ width: '100%', padding: '10px 16px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}
         >
           {loading ? 'Solving Hungarian Reductions…' : 'Solve'}
         </button>
