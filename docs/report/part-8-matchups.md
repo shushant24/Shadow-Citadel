@@ -142,7 +142,7 @@ The tab opens with the grid only (nothing is solved). The result appears when th
 ```
 
 ### 3.2 Visual tokens and colour legend
-Colours come from the `theme.css` tokens (`--panel`, `--panel-border`, `--accent`, `--ok`, `--warn`) plus Tailwind utilities (see `docs/decisions.md`, item 11).
+Colours come from the `theme.css` tokens (`--panel`, `--panel-border`, `--accent`, `--ok`, `--warn`) using semantic classes (see `docs/decisions.md`, item 11).
 - **Green ring and tick (`--ok`):** the chosen pair. The tick means the meaning does not depend on colour alone.
 - **Orange ring:** a cell that changed since the previous step.
 - **Blue "ZERO" cell:** a zero in the current matrix.
