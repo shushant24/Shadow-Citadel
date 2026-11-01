@@ -113,9 +113,13 @@ def test_pipeline_endpoint_with_the_naive_route_is_infeasible(scenario):
     assert result["status"] == "infeasible" and result["answer"]["craft_time"] == 40
 
 
-def test_pipeline_endpoint_rejects_invalid_inputs():
+def test_pipeline_endpoint_rejects_invalid_inputs(scenario):
     assert client.post("/api/pipeline", json={}).status_code == 422
     assert client.post("/api/pipeline?route=invalid", json={}).status_code == 422
+    # Malformed limits (slots as list)
+    assert client.post("/api/pipeline", json={**scenario, "limits": {**scenario["limits"], "slots": [14]}}).status_code == 422
+    # Malformed recipes (score as number instead of list)
+    assert client.post("/api/pipeline", json={**scenario, "recipes": {**scenario["recipes"], "score": 5}}).status_code == 422
 
 
 @pending

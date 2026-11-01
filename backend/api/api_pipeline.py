@@ -20,5 +20,5 @@ def post_pipeline(
 ) -> dict:
     try:
         return run_pipeline(scenario, route=route)
-    except (ValueError, KeyError) as exc:
+    except (ValueError, KeyError, TypeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
