@@ -1,5 +1,5 @@
 import pytest
-from conftest import check_contract, check_envelope, pending
+from conftest import check_contract, check_envelope
 from solvers.geometry import random_map, time_matrix as build_time_matrix
 from solvers.hull import convex_hull
 from solvers.pipeline import run_pipeline
@@ -89,7 +89,6 @@ def test_geometry_edge_cases_and_validation():
         random_map(seed=0, n_nodes=0)
 
 
-@pending
 def test_pipeline_total_is_562(scenario):
     result = run_pipeline(scenario)
     check_contract("pipeline", result)
@@ -98,10 +97,40 @@ def test_pipeline_total_is_562(scenario):
     assert result["answer"]["route_policy"] == "optimal"
 
 
-@pending
 def test_pipeline_with_the_naive_route_leaves_crafting_infeasible(scenario):
     result = run_pipeline(scenario, route="nearest_neighbour")
     check_contract("pipeline", result)
     assert result["status"] == "infeasible"
     assert (result["answer"]["tour_time"], result["answer"]["craft_time"]) == (80, 40)
     assert result["answer"]["combat"] == 445 and result["answer"]["total"] is None
+
+
+def test_pipeline_validation_and_edge_cases(scenario):
+    # Invalid route
+    with pytest.raises(ValueError, match="route must be one of"):
+        run_pipeline(scenario, route="invalid")
+
+    # Non-dict scenario
+    with pytest.raises(ValueError, match="scenario must be a dictionary"):
+        run_pipeline("not a dict")
+
+    # Missing required key
+    bad_sc = {k: v for k, v in scenario.items() if k != "total_time"}
+    with pytest.raises(ValueError, match="scenario missing required keys"):
+        run_pipeline(bad_sc)
+
+    # Invalid total_time
+    with pytest.raises(ValueError, match="total_time must be a finite positive number"):
+        run_pipeline({**scenario, "total_time": -10})
+
+    # Too few nodes
+    with pytest.raises(ValueError, match="nodes must be a dictionary with at least two points"):
+        run_pipeline({**scenario, "nodes": {"Base": [0, 0]}})
+
+    # Craft time negative
+    short_sc = {**scenario, "total_time": 30}
+    res_short = run_pipeline(short_sc)
+    check_contract("pipeline", res_short)
+    assert res_short["status"] == "infeasible"
+    assert res_short["answer"]["craft_time"] < 0
+    assert "crafting plan is infeasible" in res_short["answer"]["message"]

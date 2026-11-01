@@ -6,14 +6,19 @@ The body is the scenario (docs/api-contract.md).
 """
 from typing import Any, Dict, Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
-from api._stub import not_implemented
+from solvers.pipeline import run_pipeline
 
 router = APIRouter()
 
 
 @router.post("/pipeline")
-def post_pipeline(scenario: Dict[str, Any], route: Literal["optimal", "nearest_neighbour"] = "optimal") -> dict:
-    # TODO(Part 5): solvers.pipeline.run_pipeline(scenario, route=route)
-    raise not_implemented(5, "/api/pipeline")
+def post_pipeline(
+    scenario: Dict[str, Any],
+    route: Literal["optimal", "nearest_neighbour"] = "optimal",
+) -> dict:
+    try:
+        return run_pipeline(scenario, route=route)
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
