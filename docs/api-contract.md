@@ -57,7 +57,7 @@ Step: `{"action": "push"|"pop"|"skip", "point": "L4", "stack": ["Base","L4"]}`. 
 - `answer`: `pairs` (dummy pairs left out), `total` (computed on the **original** scores), `unassigned: {"rows": [], "cols": []}` (an original row or column that was matched to a dummy).
 - Step phases, in order: `convert`, `row_reduce`, `col_reduce`, then `cover` (and `adjust` followed by another `cover`) repeated until n lines cover all zeros, then `final`. Every step has the full current `matrix` (padded to square), `covered_rows`, `covered_cols`, `dummy_rows`, `dummy_cols`, `note`. `adjust` adds `delta`; `final` adds `selected` (the chosen zeros, dummies included).
 - `maximize: false` skips the `c_ij = P_max - p_ij` conversion (the `convert` step then only pads).
-- Fixtures: `assign.json` (445), `assign_unbalanced.json` (5 weapons x 4 bosses, total 385), `assign_adjust.json` (4x4 that needs an adjust step; carries its own `input`).
+- Fixtures: `assign.json` (445), `assign_unbalanced.json` (5 weapons x 4 bosses, total 385), `assign_adjust.json` (4x4 maximize that needs an adjust step, total 116; carries its own `input`), `assign_adjust_min.json` (the plan's 4x4 minimize case, total 17, `maximize: false`; carries its own `input`), `assign_4x5.json` (4 weapons x 5 bosses, total 349, `unassigned.cols = [4]`, `dummy_rows = [5]`; carries its own `input`).
 
 ### `/api/craft`
 Request `time_limit` = minutes left for crafting; `recipes` and `limits` as in `data/scenario.json`; `method` `"bigm"` (default) or `"twophase"`.

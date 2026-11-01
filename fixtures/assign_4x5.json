@@ -1,0 +1,436 @@
+{
+  "status": "optimal",
+  "answer": {
+    "pairs": [
+      [
+        1,
+        5
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        4,
+        1
+      ]
+    ],
+    "total": 349,
+    "unassigned": {
+      "rows": [],
+      "cols": [
+        4
+      ]
+    }
+  },
+  "steps": [
+    {
+      "phase": "convert",
+      "matrix": [
+        [
+          15,
+          33,
+          0,
+          54,
+          1
+        ],
+        [
+          49,
+          57,
+          36,
+          38,
+          47
+        ],
+        [
+          14,
+          0,
+          16,
+          47,
+          36
+        ],
+        [
+          2,
+          19,
+          25,
+          37,
+          13
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [
+        5
+      ],
+      "dummy_cols": [],
+      "note": "c_ij = P_max - p_ij with P_max = 97 ; dummy zero row/column added"
+    },
+    {
+      "phase": "row_reduce",
+      "matrix": [
+        [
+          15,
+          33,
+          0,
+          54,
+          1
+        ],
+        [
+          13,
+          21,
+          0,
+          2,
+          11
+        ],
+        [
+          14,
+          0,
+          16,
+          47,
+          36
+        ],
+        [
+          0,
+          17,
+          23,
+          35,
+          11
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [
+        5
+      ],
+      "dummy_cols": [],
+      "note": "Subtract the minimum of each row from every value in that row."
+    },
+    {
+      "phase": "col_reduce",
+      "matrix": [
+        [
+          15,
+          33,
+          0,
+          54,
+          1
+        ],
+        [
+          13,
+          21,
+          0,
+          2,
+          11
+        ],
+        [
+          14,
+          0,
+          16,
+          47,
+          36
+        ],
+        [
+          0,
+          17,
+          23,
+          35,
+          11
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [
+        5
+      ],
+      "dummy_cols": [],
+      "note": "Subtract the minimum of each column from every value in that column."
+    },
+    {
+      "phase": "cover",
+      "matrix": [
+        [
+          15,
+          33,
+          0,
+          54,
+          1
+        ],
+        [
+          13,
+          21,
+          0,
+          2,
+          11
+        ],
+        [
+          14,
+          0,
+          16,
+          47,
+          36
+        ],
+        [
+          0,
+          17,
+          23,
+          35,
+          11
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [
+        3,
+        4,
+        5
+      ],
+      "covered_cols": [
+        3
+      ],
+      "dummy_rows": [
+        5
+      ],
+      "dummy_cols": [],
+      "note": "Cover all zeros with a minimum number of lines (4 of 5)."
+    },
+    {
+      "phase": "adjust",
+      "matrix": [
+        [
+          14,
+          32,
+          0,
+          53,
+          0
+        ],
+        [
+          12,
+          20,
+          0,
+          1,
+          10
+        ],
+        [
+          14,
+          0,
+          17,
+          47,
+          36
+        ],
+        [
+          0,
+          17,
+          24,
+          35,
+          11
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [
+        3,
+        4,
+        5
+      ],
+      "covered_cols": [
+        3
+      ],
+      "dummy_rows": [
+        5
+      ],
+      "dummy_cols": [],
+      "note": "Subtract delta from uncovered cells and add it at intersections of two covering lines.",
+      "delta": 1
+    },
+    {
+      "phase": "cover",
+      "matrix": [
+        [
+          14,
+          32,
+          0,
+          53,
+          0
+        ],
+        [
+          12,
+          20,
+          0,
+          1,
+          10
+        ],
+        [
+          14,
+          0,
+          17,
+          47,
+          36
+        ],
+        [
+          0,
+          17,
+          24,
+          35,
+          11
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "covered_cols": [],
+      "dummy_rows": [
+        5
+      ],
+      "dummy_cols": [],
+      "note": "Cover all zeros with a minimum number of lines (5 of 5)."
+    },
+    {
+      "phase": "final",
+      "matrix": [
+        [
+          14,
+          32,
+          0,
+          53,
+          0
+        ],
+        [
+          12,
+          20,
+          0,
+          1,
+          10
+        ],
+        [
+          14,
+          0,
+          17,
+          47,
+          36
+        ],
+        [
+          0,
+          17,
+          24,
+          35,
+          11
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [
+        5
+      ],
+      "dummy_cols": [],
+      "note": "The selected zero cells define the optimal assignment; dummy matches are included in selected.",
+      "selected": [
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          5,
+          4
+        ]
+      ]
+    }
+  ],
+  "_fixture_note": "4 weapons x 5 bosses unbalanced example: 4 weapons assigned, Boss 4 unassigned, total 349.",
+  "input": {
+    "scores": [
+      [
+        82,
+        64,
+        97,
+        43,
+        96
+      ],
+      [
+        48,
+        40,
+        61,
+        59,
+        50
+      ],
+      [
+        83,
+        97,
+        81,
+        50,
+        61
+      ],
+      [
+        95,
+        78,
+        72,
+        60,
+        84
+      ]
+    ],
+    "maximize": true
+  }
+}
