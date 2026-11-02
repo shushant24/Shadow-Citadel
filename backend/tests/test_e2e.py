@@ -123,4 +123,13 @@ def test_pipeline_endpoint_rejects_invalid_inputs(scenario):
     assert client.post("/api/pipeline", json={**scenario, "recipes": {**scenario["recipes"], "score": 5}}).status_code == 422
 
 def test_experiments_endpoint_responds():
-    check_contract("experiments", call("GET", "/api/experiments"))
+    result = call("GET", "/api/experiments")
+    check_contract("experiments", result)
+    assert result["status"] == "optimal"
+    modules = {m["module"]: m for m in result["answer"]["modules"]}
+    assert modules["Route"]["naive"] == 80 and modules["Route"]["optimized"] == 70
+    assert modules["Assignment"]["naive"] == 414 and modules["Assignment"]["optimized"] == 445
+    assert modules["Crafting"]["naive"] == 111 and modules["Crafting"]["optimized"] == 117
+    assert modules["Whole pipeline"]["naive"] is None and modules["Whole pipeline"]["optimized"] == 562
+    assert len(result["answer"]["random_maps"]["maps"]) == 20
+

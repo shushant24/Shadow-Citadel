@@ -1,14 +1,20 @@
 """Part 10: 20 seeded random maps (8 to 10 nodes): average gain and solver time."""
 from __future__ import annotations
 
+import copy
+import functools
+import json
 import math
 import random
 import time
 from typing import Any
 
 from envelope import envelope
-from solvers.baselines import greedy_assignment, nearest_neighbour
+from paths import SCENARIO_PATH
+from solvers.baselines import equal_split_crafting, greedy_assignment, nearest_neighbour
 from solvers.hungarian import solve_assignment
+from solvers.pipeline import run_pipeline
+from solvers.tsp import solve_tsp
 
 
 # ---------------------------------------------------------------------------
@@ -39,33 +45,22 @@ def _random_map(seed: int, n_nodes: int) -> dict[str, Any]:
     return {"labels": labels, "matrix": matrix, "nodes": coords}
 
 
-def _opt_tour_cost(matrix: list[list[float]], labels: list[str]) -> float | None:
-    """Compute the optimal TSP tour cost using the Hungarian + branch-and-bound solver.
-
-    Returns None if solve_tsp is not yet available (Part 4 still a stub).
-    """
-    try:
-        from solvers.tsp import solve_tsp  # Part 4
-        result = solve_tsp(matrix, labels)
-        if result["status"] == "optimal":
-            return result["answer"]["cost"]
-        return None
-    except NotImplementedError:
-        return None
+def _opt_tour_cost(matrix: list[list[float]], labels: list[str]) -> float:
+    """Compute the optimal TSP tour cost using the Hungarian + branch-and-bound solver."""
+    result = solve_tsp(matrix, labels)
+    if result["status"] == "optimal":
+        return result["answer"]["cost"]
+    raise RuntimeError(
+        f"solve_tsp failed with status {result['status']!r}: {result.get('answer', {}).get('message')}"
+    )
 
 
-def _opt_assignment_cost(scores: list[list[float]]) -> float | None:
-    """Compute the optimal assignment score using the Hungarian solver (Part 3).
-
-    Returns None if the solver is not yet available.
-    """
-    try:
-        result = solve_assignment(scores, maximize=True)
-        if result["status"] == "optimal":
-            return result["answer"]["total"]
-        return None
-    except (NotImplementedError, Exception):
-        return None
+def _opt_assignment_cost(scores: list[list[float]]) -> float:
+    """Compute the optimal assignment score using the Hungarian solver (Part 3)."""
+    result = solve_assignment(scores, maximize=True)
+    if result["status"] == "optimal":
+        return result["answer"]["total"]
+    raise RuntimeError(f"solve_assignment failed with status {result['status']!r}")
 
 
 def _random_scores(rng: random.Random, n: int, m: int) -> list[list[float]]:
@@ -73,92 +68,105 @@ def _random_scores(rng: random.Random, n: int, m: int) -> list[list[float]]:
     return [[rng.randint(30, 100) for _ in range(m)] for _ in range(n)]
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-
-def run_experiments(n_maps: int = 20, seed: int = 0) -> dict[str, Any]:
-    """Run experiments on `n_maps` seeded random maps and return an envelope.
-
-    For each map:
-      - n_nodes is drawn uniformly from [8, 10]
-      - Nearest-neighbour vs optimal TSP tour cost (gain % = reduction in travel time)
-      - Greedy vs optimal assignment (gain % = increase in score)
-      - Solver timing (Hungarian only, ms)
-
-    The per-map seed is derived deterministically from the global seed so that
-    run_experiments(n_maps, seed) is fully reproducible.
-
-    Answer shape (docs/api-contract.md):
-      modules: canonical 4-row summary using the demo-scenario values
-      random_maps: {n, avg_route_gain_pct, avg_assign_gain_pct, avg_solver_ms, maps: [...]}
-    """
-    rng = random.Random(seed)
-
-    # ---- canonical demo-scenario modules (always present) ----
-    # Crafting and Whole-pipeline naive are still null at this stage (Part 10 first half
-    # computed the equal-split result; those numbers belong in the fixture already).
-    from solvers.baselines import equal_split_crafting
-    import json
-    from paths import SCENARIO_PATH
+@functools.lru_cache(maxsize=1)
+def _load_scenario() -> dict[str, Any]:
+    """Load the demo scenario JSON file from disk."""
     with open(SCENARIO_PATH, encoding="utf-8") as f:
-        scenario = json.load(f)
+        return json.load(f)
 
-    # Naive crafting: equal-split at 50 min (after optimal 70-min tour)
-    craft_plan = equal_split_crafting(scenario, 50)
-    naive_craft_score = craft_plan[1] if craft_plan is not None else None
-    naive_craft_gain = None
-    if naive_craft_score is not None:
-        naive_craft_gain = round(((117 - naive_craft_score) / 117) * 100, 2)
 
-    # Naive pipeline: route = 80, crafting infeasible → total = None
-    # Optimized pipeline: total = 562
-    modules = [
+def _compute_demo_modules(scenario: dict[str, Any]) -> list[dict[str, Any]]:
+    """Compute the 4-row canonical summary table for the demo scenario from active solvers."""
+    # 1. Pipeline optimal & naive (nearest_neighbour)
+    opt_pipe = run_pipeline(scenario, route="optimal")
+    naive_pipe = run_pipeline(scenario, route="nearest_neighbour")
+
+    # Route: naive tour time vs optimal tour time (lower is better)
+    route_naive = naive_pipe["answer"]["tour_time"]
+    route_opt = opt_pipe["answer"]["tour_time"]
+    route_gain = round(((route_naive - route_opt) / route_naive) * 100, 2) if route_naive else 0.0
+
+    # 2. Assignment: greedy vs Hungarian optimal (higher is better)
+    scores = scenario["weapon_boss_scores"]
+    _pairs, assign_naive = greedy_assignment(scores)
+    assign_opt = solve_assignment(scores, maximize=True)["answer"]["total"]
+    assign_gain = round(((assign_opt - assign_naive) / assign_naive) * 100, 2) if assign_naive else 0.0
+
+    # 3. Crafting: equal-split heuristic at remaining craft time vs optimal crafting (higher is better)
+    opt_craft_time = opt_pipe["answer"]["craft_time"]
+    opt_craft = opt_pipe["answer"]["crafting"]
+    craft_plan = equal_split_crafting(scenario, opt_craft_time)
+    craft_naive = craft_plan[1] if craft_plan is not None else None
+    craft_gain = (
+        round(((opt_craft - craft_naive) / craft_naive) * 100, 2)
+        if (craft_naive is not None and craft_naive > 0)
+        else None
+    )
+
+    # 4. Whole pipeline: naive route leaves infeasible crafting vs optimal total (higher is better)
+    pipe_naive = naive_pipe["answer"]["total"]
+    pipe_opt = opt_pipe["answer"]["total"]
+    pipe_gain = (
+        round(((pipe_opt - pipe_naive) / pipe_naive) * 100, 2)
+        if (pipe_naive is not None and pipe_naive > 0)
+        else None
+    )
+    naive_craft_time = naive_pipe["answer"]["craft_time"]
+
+    return [
         {
             "module": "Route",
-            "naive": 80,
-            "optimized": 70,
+            "naive": route_naive,
+            "optimized": route_opt,
             "unit": "minutes",
-            "gain_pct": 12.5,
+            "gain_pct": route_gain,
             "direction": "lower_is_better",
         },
         {
             "module": "Assignment",
-            "naive": 414,
-            "optimized": 445,
+            "naive": assign_naive,
+            "optimized": assign_opt,
             "unit": "score",
-            "gain_pct": round(((445 - 414) / 414) * 100, 2),
+            "gain_pct": assign_gain,
             "direction": "higher_is_better",
         },
         {
             "module": "Crafting",
-            "naive": naive_craft_score,
-            "optimized": 117,
+            "naive": craft_naive,
+            "optimized": opt_craft,
             "unit": "score",
-            "gain_pct": naive_craft_gain,
+            "gain_pct": craft_gain,
             "direction": "higher_is_better",
-            "naive_note": "Equal-split heuristic at 50 min remaining after optimal tour",
+            "naive_note": f"Equal-split heuristic at {opt_craft_time} min remaining after optimal tour",
         },
         {
             "module": "Whole pipeline",
-            "naive": None,
-            "optimized": 562,
+            "naive": pipe_naive,
+            "optimized": pipe_opt,
             "unit": "score",
-            "gain_pct": None,
+            "gain_pct": pipe_gain,
             "direction": "higher_is_better",
-            "naive_note": "Naive route leaves 40 min of crafting: infeasible",
+            "naive_note": f"Naive route leaves {naive_craft_time} min of crafting: infeasible",
         },
     ]
 
-    # ---- 20-map random experiment ----
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+@functools.lru_cache(maxsize=32)
+def _run_experiments_cached(n_maps: int = 20, seed: int = 0) -> dict[str, Any]:
+    rng = random.Random(seed)
+    scenario = _load_scenario()
+    modules = _compute_demo_modules(scenario)
+
     map_results = []
     total_route_gain = 0.0
     total_assign_gain = 0.0
     total_solver_ms = 0.0
-    valid_route = 0
-    valid_assign = 0
 
-    for i in range(n_maps):
+    for _ in range(n_maps):
         map_seed = rng.randint(0, 2**31 - 1)
         n_nodes = rng.randint(8, 10)
 
@@ -169,32 +177,24 @@ def run_experiments(n_maps: int = 20, seed: int = 0) -> dict[str, Any]:
         # --- TSP: nearest neighbour baseline ---
         _nn_tour, nn_cost = nearest_neighbour(matrix, labels, start=labels[0])
 
-        # --- TSP: optimal (Part 4) ---
-        opt_cost = _opt_tour_cost(matrix, labels)
-
-        # --- Route gain ---
-        route_gain_pct = None
-        if opt_cost is not None and nn_cost > 0:
-            route_gain_pct = round(((nn_cost - opt_cost) / nn_cost) * 100, 4)
-            total_route_gain += route_gain_pct
-            valid_route += 1
-
         # --- Assignment: generate random 5x5 scores ---
         map_rng = random.Random(map_seed)
         scores = _random_scores(map_rng, 5, 5)
         _greedy_pairs, greedy_total = greedy_assignment(scores)
 
-        # --- Assignment: optimal (Part 3 Hungarian) ---
+        # --- Solvers: optimal TSP (branch-and-bound) + Hungarian assignment ---
         t0 = time.perf_counter()
+        opt_cost = _opt_tour_cost(matrix, labels)
         opt_assign = _opt_assignment_cost(scores)
         solver_ms = round((time.perf_counter() - t0) * 1000, 3)
 
-        # --- Assignment gain ---
-        assign_gain_pct = None
-        if opt_assign is not None and greedy_total > 0:
-            assign_gain_pct = round(((opt_assign - greedy_total) / greedy_total) * 100, 4)
-            total_assign_gain += assign_gain_pct
-            valid_assign += 1
+        # --- Route gain (reduction in travel time) ---
+        route_gain_pct = round(((nn_cost - opt_cost) / nn_cost) * 100, 4) if nn_cost > 0 else 0.0
+        total_route_gain += route_gain_pct
+
+        # --- Assignment gain (increase in combat score) ---
+        assign_gain_pct = round(((opt_assign - greedy_total) / greedy_total) * 100, 4) if greedy_total > 0 else 0.0
+        total_assign_gain += assign_gain_pct
 
         total_solver_ms += solver_ms
 
@@ -211,8 +211,8 @@ def run_experiments(n_maps: int = 20, seed: int = 0) -> dict[str, Any]:
         }
         map_results.append(map_entry)
 
-    avg_route_gain = round(total_route_gain / valid_route, 4) if valid_route > 0 else 0.0
-    avg_assign_gain = round(total_assign_gain / valid_assign, 4) if valid_assign > 0 else 0.0
+    avg_route_gain = round(total_route_gain / n_maps, 4)
+    avg_assign_gain = round(total_assign_gain / n_maps, 4)
     avg_solver_ms = round(total_solver_ms / n_maps, 3)
 
     random_maps = {
@@ -224,3 +224,29 @@ def run_experiments(n_maps: int = 20, seed: int = 0) -> dict[str, Any]:
     }
 
     return envelope("optimal", {"modules": modules, "random_maps": random_maps})
+
+
+def run_experiments(n_maps: int = 20, seed: int = 0) -> dict[str, Any]:
+    """Run experiments on `n_maps` seeded random maps and return an envelope.
+
+    For each map:
+      - n_nodes is drawn uniformly from [8, 10]
+      - Nearest-neighbour vs optimal TSP tour cost (gain % = reduction in travel time)
+      - Greedy vs optimal assignment (gain % = increase in score)
+      - Solver timing (TSP branch-and-bound + Hungarian assignment, ms)
+
+    Solution costs, tours, scores, and percentage gains are fully deterministic and
+    reproducible for the same seed. Timing fields (`solver_ms` and `avg_solver_ms`) measure
+    actual CPU execution time and naturally vary between runs and hardware.
+
+    Answer shape (docs/api-contract.md):
+      modules: canonical 4-row summary computed from the demo scenario and solvers
+      random_maps: {n, avg_route_gain_pct, avg_assign_gain_pct, avg_solver_ms, maps: [...]}
+    """
+    if not isinstance(n_maps, int) or isinstance(n_maps, bool) or n_maps < 1:
+        raise ValueError(f"n_maps must be an integer >= 1, got {n_maps!r}")
+
+    return copy.deepcopy(_run_experiments_cached(n_maps, seed))
+
+
+run_experiments.cache_clear = _run_experiments_cached.cache_clear

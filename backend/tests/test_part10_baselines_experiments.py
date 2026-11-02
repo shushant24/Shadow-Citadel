@@ -110,30 +110,38 @@ def test_nearest_neighbour_start_validation():
     matrix = [[0, 10], [10, 0]]
     labels = ["Base", "C1"]
 
+    # Unknown label (e.g. typo)
     with pytest.raises(ValueError, match="Unknown start label 'Basee'"):
         nearest_neighbour(matrix, labels, start="Basee")
 
+    # Negative index
     with pytest.raises(ValueError, match="out of range"):
         nearest_neighbour(matrix, labels, start=-1)
 
+    # Out of range index
     with pytest.raises(ValueError, match="out of range"):
         nearest_neighbour(matrix, labels, start=99)
 
+    # Invalid type
     with pytest.raises(ValueError, match="start must be a string label or integer index"):
         nearest_neighbour(matrix, labels, start=True)
 
 
 def test_nearest_neighbour_empty_single_node_and_dimension_validation():
     """nearest_neighbour handles empty and single-node matrices, and rejects dimension mismatches."""
+    # Empty
     res_empty = nearest_neighbour([], [])
     assert res_empty == ([], 0)
 
+    # Single-node
     res_single = nearest_neighbour([[0]], ["Base"], start="Base")
     assert res_single == (["Base", "Base"], 0)
 
+    # Label vs matrix dimension mismatch
     with pytest.raises(ValueError, match="Dimension mismatch"):
         nearest_neighbour([[0]], ["Base", "C1"])
 
+    # Non-square matrix
     with pytest.raises(ValueError, match="Matrix must be square"):
         nearest_neighbour([[0, 1], [0]], ["Base", "C1"])
 
@@ -142,6 +150,7 @@ def test_nearest_neighbour_unreachable_node_and_partial_tour():
     """nearest_neighbour raises ValueError when no finite arc remains or return to start is unreachable."""
     labels = ["Base", "C1", "C2"]
 
+    # Outgoing candidate is unreachable (all infinite or NaN)
     matrix_blocked = [
         [0, float("inf"), float("inf")],
         [float("inf"), 0, 5],
@@ -150,10 +159,11 @@ def test_nearest_neighbour_unreachable_node_and_partial_tour():
     with pytest.raises(ValueError, match="No reachable unvisited node"):
         nearest_neighbour(matrix_blocked, labels, start="Base")
 
+    # Return arc to start is unreachable
     matrix_no_return = [
         [0, 5, float("inf")],
         [float("inf"), 0, 5],
-        [float("inf"), float("inf"), 0],
+        [float("inf"), float("inf"), 0],  # from C2 cannot reach Base
     ]
     with pytest.raises(ValueError, match="No reachable return arc"):
         nearest_neighbour(matrix_no_return, labels, start="Base")
@@ -161,6 +171,7 @@ def test_nearest_neighbour_unreachable_node_and_partial_tour():
 
 def test_nearest_neighbour_tie_breaking_picks_lowest_index():
     """nearest_neighbour breaks distance ties by picking the candidate with the lowest index."""
+    # From Base (idx 0), C1 (idx 1), C2 (idx 2), and C3 (idx 3) all have identical distance 10
     matrix = [
         [0, 10, 10, 10],
         [10, 0, 10, 10],
@@ -175,19 +186,25 @@ def test_nearest_neighbour_tie_breaking_picks_lowest_index():
 
 def test_greedy_assignment_more_bosses_than_weapons_and_tie_breaking():
     """greedy_assignment handles more bosses than weapons and breaks score ties by lowest column index."""
+    # 2 weapons, 4 bosses
     scores = [
         [10, 50, 30, 20],
         [15, 45, 60, 25],
     ]
     pairs, total = greedy_assignment(scores)
+    # Weapon 1 takes Boss 2 (score 50)
+    # Weapon 2 takes Boss 3 (score 60)
     assert pairs == [[1, 2], [2, 3]]
     assert total == 110
 
+    # Tie-breaking on equal scores: Weapon 1 has score 50 on Boss 1 and Boss 2
     scores_tie = [
         [50, 50],
         [20, 30],
     ]
     pairs_tie, total_tie = greedy_assignment(scores_tie)
+    # Weapon 1 takes Boss 1 (index 0, 1-based: 1)
+    # Weapon 2 takes Boss 2 (index 1, 1-based: 2)
     assert pairs_tie == [[1, 1], [2, 2]]
     assert total_tie == 80
 
@@ -199,27 +216,33 @@ def test_greedy_assignment_negative_scores():
         [-20, -5],
     ]
     pairs, total = greedy_assignment(scores)
+    # Weapon 1 chooses max(-10, -50) = Boss 1 (-10)
+    # Weapon 2 chooses remaining Boss 2 (-5)
     assert pairs == [[1, 1], [2, 2]]
     assert total == -15
 
 
 def test_greedy_assignment_validation_ragged_nan_and_types():
     """greedy_assignment validates rectangular, finite, numeric matrix up front."""
+    # Empty
     assert greedy_assignment([]) == ([], 0)
     assert greedy_assignment([[]]) == ([], 0)
 
+    # Ragged rows
     with pytest.raises(ValueError, match="scores must be rectangular"):
         greedy_assignment([[1, 2], [3]])
 
     with pytest.raises(ValueError, match="scores must be rectangular"):
         greedy_assignment([[1, 2], [3, 4, 5]])
 
+    # Non-finite values
     with pytest.raises(ValueError, match="must be a finite number"):
         greedy_assignment([[1, float("nan")], [3, 4]])
 
     with pytest.raises(ValueError, match="must be a finite number"):
         greedy_assignment([[1, float("inf")], [3, 4]])
 
+    # Non-numeric or boolean values
     with pytest.raises(ValueError, match="must be a finite number"):
         greedy_assignment([[1, True], [3, 4]])
 
@@ -256,14 +279,86 @@ def test_numpy_scalars_accepted_in_greedy_and_nearest_neighbour():
 def test_experiments_cover_20_maps():
     result = run_experiments(n_maps=20, seed=0)
     check_contract("experiments", result)
-    assert len(result["answer"]["random_maps"]["maps"]) == 20
+    assert result["status"] == "optimal"
+    answer = result["answer"]
+
+    # 1. Assert computed module values for the demo scenario
+    modules = {m["module"]: m for m in answer["modules"]}
+    assert len(modules) == 4
+
+    route = modules["Route"]
+    assert route["naive"] == 80
+    assert route["optimized"] == 70
+    assert route["gain_pct"] == 12.5
+    assert route["direction"] == "lower_is_better"
+
+    assign = modules["Assignment"]
+    assert assign["naive"] == 414
+    assert assign["optimized"] == 445
+    assert assign["gain_pct"] == 7.49
+    assert assign["direction"] == "higher_is_better"
+
+    craft = modules["Crafting"]
+    assert craft["naive"] == 111
+    assert craft["optimized"] == 117
+    assert craft["gain_pct"] == 5.41
+    assert craft["direction"] == "higher_is_better"
+
+    pipe = modules["Whole pipeline"]
+    assert pipe["naive"] is None
+    assert pipe["optimized"] == 562
+    assert pipe["gain_pct"] is None
+    assert pipe["direction"] == "higher_is_better"
+
+    # 2. Assert 20-map experiment results
+    rm = answer["random_maps"]
+    assert rm["n"] == 20
+    assert len(rm["maps"]) == 20
+    assert rm["avg_route_gain_pct"] >= 0.0
+    assert rm["avg_assign_gain_pct"] >= 0.0
+    assert rm["avg_solver_ms"] >= 0.0
+
+    for m in rm["maps"]:
+        assert m["opt_cost"] <= m["nn_cost"]
+        assert m["route_gain_pct"] >= 0.0
+        assert m["opt_assign"] >= m["greedy_assign"]
+        assert m["assign_gain_pct"] >= 0.0
+        assert m["solver_ms"] >= 0.0
 
 
 def test_experiments_are_reproducible_for_the_same_seed():
-    a, b = run_experiments(n_maps=3, seed=5), run_experiments(n_maps=3, seed=5)
+    # Clear cache to verify reproducibility between independent runs
+    run_experiments.cache_clear()
+    a = run_experiments(n_maps=5, seed=42)
+    run_experiments.cache_clear()
+    b = run_experiments(n_maps=5, seed=42)
 
-    def strip(result):  # timings differ between runs, everything else must repeat
-        maps = result["answer"]["random_maps"]["maps"]
+    # Modules must match exactly
+    assert a["answer"]["modules"] == b["answer"]["modules"]
+
+    # Aggregate percentages must match exactly
+    rm_a = a["answer"]["random_maps"]
+    rm_b = b["answer"]["random_maps"]
+    assert rm_a["n"] == rm_b["n"] == 5
+    assert rm_a["avg_route_gain_pct"] == rm_b["avg_route_gain_pct"]
+    assert rm_a["avg_assign_gain_pct"] == rm_b["avg_assign_gain_pct"]
+
+    # Every map must produce identical deterministic costs, scores, and gains
+    def strip(maps):  # solver timings differ between CPU runs, costs/gains do not
         return [{k: v for k, v in m.items() if "ms" not in k} for m in maps]
 
-    assert strip(a) == strip(b)
+    assert strip(rm_a["maps"]) == strip(rm_b["maps"])
+
+
+def test_run_experiments_validation():
+    with pytest.raises(ValueError, match="n_maps must be an integer >= 1"):
+        run_experiments(n_maps=0)
+
+    with pytest.raises(ValueError, match="n_maps must be an integer >= 1"):
+        run_experiments(n_maps=-1)
+
+    with pytest.raises(ValueError, match="n_maps must be an integer >= 1"):
+        run_experiments(n_maps=True)
+
+    with pytest.raises(ValueError, match="n_maps must be an integer >= 1"):
+        run_experiments(n_maps="20")
