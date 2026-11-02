@@ -1,6 +1,6 @@
 """Part 10: end-to-end check of every endpoint against the Section 4 values and the shared fixtures."""
 import pytest
-from conftest import check_contract, pending
+from conftest import check_contract
 
 pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
