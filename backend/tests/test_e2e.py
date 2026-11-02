@@ -102,6 +102,5 @@ def test_pipeline_endpoint_with_the_naive_route_is_infeasible(scenario):
     assert result["status"] == "infeasible" and result["answer"]["craft_time"] == 40
 
 
-@pending
 def test_experiments_endpoint_responds():
     check_contract("experiments", call("GET", "/api/experiments"))

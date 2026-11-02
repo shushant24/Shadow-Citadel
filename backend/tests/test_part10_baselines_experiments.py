@@ -1,7 +1,8 @@
 import copy
 import pickle
+
 import pytest
-from conftest import check_contract, pending
+from conftest import check_contract
 from solvers.baselines import (
     AssignmentResult,
     CraftingPlan,
@@ -13,6 +14,10 @@ from solvers.baselines import (
 from solvers.experiments import run_experiments
 
 
+# ---------------------------------------------------------------------------
+# Part 10 (first half) — baseline heuristics
+# ---------------------------------------------------------------------------
+
 def test_nearest_neighbour_is_80(time_matrix):
     tour, cost = nearest_neighbour(time_matrix["matrix"], time_matrix["labels"], start="Base")
     assert cost == 80
@@ -22,13 +27,6 @@ def test_nearest_neighbour_is_80(time_matrix):
 def test_greedy_assignment_is_414(scenario):
     _pairs, total = greedy_assignment(scenario["weapon_boss_scores"])
     assert total == 414
-
-
-@pending
-def test_experiments_cover_20_maps():
-    result = run_experiments(n_maps=20, seed=0)
-    check_contract("experiments", result)
-    assert len(result["answer"]["random_maps"]["maps"]) == 20
 
 
 def test_equal_split_crafting_is_infeasible_for_40_minutes_and_worse_than_117_for_50(scenario):
@@ -112,38 +110,30 @@ def test_nearest_neighbour_start_validation():
     matrix = [[0, 10], [10, 0]]
     labels = ["Base", "C1"]
 
-    # Unknown label (e.g. typo)
     with pytest.raises(ValueError, match="Unknown start label 'Basee'"):
         nearest_neighbour(matrix, labels, start="Basee")
 
-    # Negative index
     with pytest.raises(ValueError, match="out of range"):
         nearest_neighbour(matrix, labels, start=-1)
 
-    # Out of range index
     with pytest.raises(ValueError, match="out of range"):
         nearest_neighbour(matrix, labels, start=99)
 
-    # Invalid type
     with pytest.raises(ValueError, match="start must be a string label or integer index"):
         nearest_neighbour(matrix, labels, start=True)
 
 
 def test_nearest_neighbour_empty_single_node_and_dimension_validation():
     """nearest_neighbour handles empty and single-node matrices, and rejects dimension mismatches."""
-    # Empty
     res_empty = nearest_neighbour([], [])
     assert res_empty == ([], 0)
 
-    # Single-node
     res_single = nearest_neighbour([[0]], ["Base"], start="Base")
     assert res_single == (["Base", "Base"], 0)
 
-    # Label vs matrix dimension mismatch
     with pytest.raises(ValueError, match="Dimension mismatch"):
         nearest_neighbour([[0]], ["Base", "C1"])
 
-    # Non-square matrix
     with pytest.raises(ValueError, match="Matrix must be square"):
         nearest_neighbour([[0, 1], [0]], ["Base", "C1"])
 
@@ -152,7 +142,6 @@ def test_nearest_neighbour_unreachable_node_and_partial_tour():
     """nearest_neighbour raises ValueError when no finite arc remains or return to start is unreachable."""
     labels = ["Base", "C1", "C2"]
 
-    # Outgoing candidate is unreachable (all infinite or NaN)
     matrix_blocked = [
         [0, float("inf"), float("inf")],
         [float("inf"), 0, 5],
@@ -161,11 +150,10 @@ def test_nearest_neighbour_unreachable_node_and_partial_tour():
     with pytest.raises(ValueError, match="No reachable unvisited node"):
         nearest_neighbour(matrix_blocked, labels, start="Base")
 
-    # Return arc to start is unreachable
     matrix_no_return = [
         [0, 5, float("inf")],
         [float("inf"), 0, 5],
-        [float("inf"), float("inf"), 0],  # from C2 cannot reach Base
+        [float("inf"), float("inf"), 0],
     ]
     with pytest.raises(ValueError, match="No reachable return arc"):
         nearest_neighbour(matrix_no_return, labels, start="Base")
@@ -173,7 +161,6 @@ def test_nearest_neighbour_unreachable_node_and_partial_tour():
 
 def test_nearest_neighbour_tie_breaking_picks_lowest_index():
     """nearest_neighbour breaks distance ties by picking the candidate with the lowest index."""
-    # From Base (idx 0), C1 (idx 1), C2 (idx 2), and C3 (idx 3) all have identical distance 10
     matrix = [
         [0, 10, 10, 10],
         [10, 0, 10, 10],
@@ -188,25 +175,19 @@ def test_nearest_neighbour_tie_breaking_picks_lowest_index():
 
 def test_greedy_assignment_more_bosses_than_weapons_and_tie_breaking():
     """greedy_assignment handles more bosses than weapons and breaks score ties by lowest column index."""
-    # 2 weapons, 4 bosses
     scores = [
         [10, 50, 30, 20],
         [15, 45, 60, 25],
     ]
     pairs, total = greedy_assignment(scores)
-    # Weapon 1 takes Boss 2 (score 50)
-    # Weapon 2 takes Boss 3 (score 60)
     assert pairs == [[1, 2], [2, 3]]
     assert total == 110
 
-    # Tie-breaking on equal scores: Weapon 1 has score 50 on Boss 1 and Boss 2
     scores_tie = [
         [50, 50],
         [20, 30],
     ]
     pairs_tie, total_tie = greedy_assignment(scores_tie)
-    # Weapon 1 takes Boss 1 (index 0, 1-based: 1)
-    # Weapon 2 takes Boss 2 (index 1, 1-based: 2)
     assert pairs_tie == [[1, 1], [2, 2]]
     assert total_tie == 80
 
@@ -218,33 +199,27 @@ def test_greedy_assignment_negative_scores():
         [-20, -5],
     ]
     pairs, total = greedy_assignment(scores)
-    # Weapon 1 chooses max(-10, -50) = Boss 1 (-10)
-    # Weapon 2 chooses remaining Boss 2 (-5)
     assert pairs == [[1, 1], [2, 2]]
     assert total == -15
 
 
 def test_greedy_assignment_validation_ragged_nan_and_types():
     """greedy_assignment validates rectangular, finite, numeric matrix up front."""
-    # Empty
     assert greedy_assignment([]) == ([], 0)
     assert greedy_assignment([[]]) == ([], 0)
 
-    # Ragged rows
     with pytest.raises(ValueError, match="scores must be rectangular"):
         greedy_assignment([[1, 2], [3]])
 
     with pytest.raises(ValueError, match="scores must be rectangular"):
         greedy_assignment([[1, 2], [3, 4, 5]])
 
-    # Non-finite values
     with pytest.raises(ValueError, match="must be a finite number"):
         greedy_assignment([[1, float("nan")], [3, 4]])
 
     with pytest.raises(ValueError, match="must be a finite number"):
         greedy_assignment([[1, float("inf")], [3, 4]])
 
-    # Non-numeric or boolean values
     with pytest.raises(ValueError, match="must be a finite number"):
         greedy_assignment([[1, True], [3, 4]])
 
@@ -274,7 +249,16 @@ def test_numpy_scalars_accepted_in_greedy_and_nearest_neighbour():
     assert isinstance(cost, (int, float))
 
 
-@pending
+# ---------------------------------------------------------------------------
+# Part 10 (second half) — experiments
+# ---------------------------------------------------------------------------
+
+def test_experiments_cover_20_maps():
+    result = run_experiments(n_maps=20, seed=0)
+    check_contract("experiments", result)
+    assert len(result["answer"]["random_maps"]["maps"]) == 20
+
+
 def test_experiments_are_reproducible_for_the_same_seed():
     a, b = run_experiments(n_maps=3, seed=5), run_experiments(n_maps=3, seed=5)
 
