@@ -101,18 +101,25 @@ def test_craft_endpoint_rejects_invalid_inputs(scenario):
     assert client.post("/api/craft", json={"time_limit": 50.0, "recipes": huge_recipes, "limits": scenario["limits"]}).status_code == 422
 
 
-@pending
 def test_pipeline_endpoint_totals_562(scenario):
     result = call("POST", "/api/pipeline", json=scenario)
     check_contract("pipeline", result)
     assert result["answer"]["total"] == 562
 
 
-@pending
 def test_pipeline_endpoint_with_the_naive_route_is_infeasible(scenario):
     result = call("POST", "/api/pipeline?route=nearest_neighbour", json=scenario)
     check_contract("pipeline", result)
     assert result["status"] == "infeasible" and result["answer"]["craft_time"] == 40
+
+
+def test_pipeline_endpoint_rejects_invalid_inputs(scenario):
+    assert client.post("/api/pipeline", json={}).status_code == 422
+    assert client.post("/api/pipeline?route=invalid", json={}).status_code == 422
+    # Malformed limits (slots as list)
+    assert client.post("/api/pipeline", json={**scenario, "limits": {**scenario["limits"], "slots": [14]}}).status_code == 422
+    # Malformed recipes (score as number instead of list)
+    assert client.post("/api/pipeline", json={**scenario, "recipes": {**scenario["recipes"], "score": 5}}).status_code == 422
 
 
 @pending
