@@ -1,12 +1,11 @@
 """Part 10: /api/experiments (naive vs optimized, plus the 20-map summary)."""
 from fastapi import APIRouter
 
-from api._stub import not_implemented
+from solvers.experiments import run_experiments
 
 router = APIRouter()
 
 
 @router.get("/experiments")
 def get_experiments() -> dict:
-    # TODO(Part 10): solvers.experiments.run_experiments()
-    raise not_implemented(10, "/api/experiments")
+    return run_experiments(n_maps=20, seed=0)

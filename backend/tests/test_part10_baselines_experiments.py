@@ -1,7 +1,8 @@
 import copy
 import pickle
+
 import pytest
-from conftest import check_contract, pending
+from conftest import check_contract
 from solvers.baselines import (
     AssignmentResult,
     CraftingPlan,
@@ -13,6 +14,10 @@ from solvers.baselines import (
 from solvers.experiments import run_experiments
 
 
+# ---------------------------------------------------------------------------
+# Part 10 (first half) — baseline heuristics
+# ---------------------------------------------------------------------------
+
 def test_nearest_neighbour_is_80(time_matrix):
     tour, cost = nearest_neighbour(time_matrix["matrix"], time_matrix["labels"], start="Base")
     assert cost == 80
@@ -22,13 +27,6 @@ def test_nearest_neighbour_is_80(time_matrix):
 def test_greedy_assignment_is_414(scenario):
     _pairs, total = greedy_assignment(scenario["weapon_boss_scores"])
     assert total == 414
-
-
-@pending
-def test_experiments_cover_20_maps():
-    result = run_experiments(n_maps=20, seed=0)
-    check_contract("experiments", result)
-    assert len(result["answer"]["random_maps"]["maps"]) == 20
 
 
 def test_equal_split_crafting_is_infeasible_for_40_minutes_and_worse_than_117_for_50(scenario):
@@ -274,12 +272,93 @@ def test_numpy_scalars_accepted_in_greedy_and_nearest_neighbour():
     assert isinstance(cost, (int, float))
 
 
-@pending
-def test_experiments_are_reproducible_for_the_same_seed():
-    a, b = run_experiments(n_maps=3, seed=5), run_experiments(n_maps=3, seed=5)
+# ---------------------------------------------------------------------------
+# Part 10 (second half) — experiments
+# ---------------------------------------------------------------------------
 
-    def strip(result):  # timings differ between runs, everything else must repeat
-        maps = result["answer"]["random_maps"]["maps"]
+def test_experiments_cover_20_maps():
+    result = run_experiments(n_maps=20, seed=0)
+    check_contract("experiments", result)
+    assert result["status"] == "optimal"
+    answer = result["answer"]
+
+    # 1. Assert computed module values for the demo scenario
+    modules = {m["module"]: m for m in answer["modules"]}
+    assert len(modules) == 4
+
+    route = modules["Route"]
+    assert route["naive"] == 80
+    assert route["optimized"] == 70
+    assert route["gain_pct"] == 12.5
+    assert route["direction"] == "lower_is_better"
+
+    assign = modules["Assignment"]
+    assert assign["naive"] == 414
+    assert assign["optimized"] == 445
+    assert assign["gain_pct"] == 7.49
+    assert assign["direction"] == "higher_is_better"
+
+    craft = modules["Crafting"]
+    assert craft["naive"] == 111
+    assert craft["optimized"] == 117
+    assert craft["gain_pct"] == 5.41
+    assert craft["direction"] == "higher_is_better"
+
+    pipe = modules["Whole pipeline"]
+    assert pipe["naive"] is None
+    assert pipe["optimized"] == 562
+    assert pipe["gain_pct"] is None
+    assert pipe["direction"] == "higher_is_better"
+
+    # 2. Assert 20-map experiment results
+    rm = answer["random_maps"]
+    assert rm["n"] == 20
+    assert len(rm["maps"]) == 20
+    assert rm["avg_route_gain_pct"] >= 0.0
+    assert rm["avg_assign_gain_pct"] >= 0.0
+    assert rm["avg_solver_ms"] >= 0.0
+
+    for m in rm["maps"]:
+        assert m["opt_cost"] <= m["nn_cost"]
+        assert m["route_gain_pct"] >= 0.0
+        assert m["opt_assign"] >= m["greedy_assign"]
+        assert m["assign_gain_pct"] >= 0.0
+        assert m["solver_ms"] >= 0.0
+
+
+def test_experiments_are_reproducible_for_the_same_seed():
+    # Clear cache to verify reproducibility between independent runs
+    run_experiments.cache_clear()
+    a = run_experiments(n_maps=5, seed=42)
+    run_experiments.cache_clear()
+    b = run_experiments(n_maps=5, seed=42)
+
+    # Modules must match exactly
+    assert a["answer"]["modules"] == b["answer"]["modules"]
+
+    # Aggregate percentages must match exactly
+    rm_a = a["answer"]["random_maps"]
+    rm_b = b["answer"]["random_maps"]
+    assert rm_a["n"] == rm_b["n"] == 5
+    assert rm_a["avg_route_gain_pct"] == rm_b["avg_route_gain_pct"]
+    assert rm_a["avg_assign_gain_pct"] == rm_b["avg_assign_gain_pct"]
+
+    # Every map must produce identical deterministic costs, scores, and gains
+    def strip(maps):  # solver timings differ between CPU runs, costs/gains do not
         return [{k: v for k, v in m.items() if "ms" not in k} for m in maps]
 
-    assert strip(a) == strip(b)
+    assert strip(rm_a["maps"]) == strip(rm_b["maps"])
+
+
+def test_run_experiments_validation():
+    with pytest.raises(ValueError, match="n_maps must be an integer >= 1"):
+        run_experiments(n_maps=0)
+
+    with pytest.raises(ValueError, match="n_maps must be an integer >= 1"):
+        run_experiments(n_maps=-1)
+
+    with pytest.raises(ValueError, match="n_maps must be an integer >= 1"):
+        run_experiments(n_maps=True)
+
+    with pytest.raises(ValueError, match="n_maps must be an integer >= 1"):
+        run_experiments(n_maps="20")
