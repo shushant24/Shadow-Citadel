@@ -208,6 +208,32 @@ describe("LoadoutTab Component (Part 9)", () => {
     expect(screen.getByLabelText("Simplex Tableau Grid")).toBeInTheDocument();
   });
 
+  it("displays constraint conflict explanation when infeasible but crafting time is sufficient", async () => {
+    // With 10 slots and fastest recipe 3m, minCraftTimeNeeded = 30m.
+    // At 40 min, activeCraftTime (40) >= minCraftTimeNeeded (30).
+    const customScenario = {
+      ...scenarioFixture,
+      limits: { ...scenarioFixture.limits, slots: 10 },
+    };
+    render(<LoadoutTab scenario={customScenario} />);
+
+    // Click Infeasible preset (40 min)
+    fireEvent.click(screen.getByTestId("preset-infeasible"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("infeasible-card")).toBeInTheDocument();
+    });
+
+    // Should render the non-time constraint conflict text
+    expect(
+      screen.getByText(/The constraints conflict at this time: check the weight, stamina, survival and slot limits/i)
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(/Check and relax the conflicting constraint limits/i)
+    ).toBeInTheDocument();
+  });
+
   it("allows overriding constraint limits (weight, slots, stamina, survival)", async () => {
     render(<LoadoutTab scenario={scenarioFixture} />);
 

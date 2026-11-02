@@ -367,14 +367,30 @@ export default function LoadoutTab({ scenario }) {
             </p>
 
             <div className="infeasible-explanation">
-              <strong>Mathematical Reason:</strong> The inventory capacity constraint requires filling all {slotsLimit} slots.
-              Even crafting the fastest possible recipe ({minRecipeTime} min per item), the minimum crafting time
-              required is {minCraftTimeNeeded} minutes ({slotsLimit} slots × {minRecipeTime} min/item). With only {activeCraftTime} minutes
-              available, no valid combination of recipes can satisfy the inventory capacity requirement.
+              <strong>Mathematical Reason:</strong>{" "}
+              {activeCraftTime < minCraftTimeNeeded ? (
+                <>
+                  The inventory capacity constraint requires filling all {slotsLimit} slots.
+                  Even crafting the fastest possible recipe ({minRecipeTime} min per item), the minimum crafting time
+                  required is {minCraftTimeNeeded} minutes ({slotsLimit} slots × {minRecipeTime} min/item). With only {activeCraftTime} minutes
+                  available, no valid combination of recipes can satisfy the inventory capacity requirement.
+                </>
+              ) : (
+                <>The constraints conflict at this time: check the weight, stamina, survival and slot limits.</>
+              )}
             </div>
 
             <div className="infeasible-action-hint">
-              <strong>Recommendation:</strong> Increase available crafting time to at least {minCraftTimeNeeded} minutes by choosing a faster raid route or extending the total raid time limit in the scenario overview.
+              <strong>Recommendation:</strong>{" "}
+              {activeCraftTime < minCraftTimeNeeded ? (
+                <>
+                  Increase available crafting time to at least {minCraftTimeNeeded} minutes by choosing a faster raid route or extending the total raid time limit in the scenario overview.
+                </>
+              ) : (
+                <>
+                  Check and relax the conflicting constraint limits (e.g. increase carry weight, reduce required survival points, or adjust inventory slots) so a feasible recipe combination exists.
+                </>
+              )}
             </div>
           </div>
         )}
