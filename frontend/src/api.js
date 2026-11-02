@@ -6,6 +6,8 @@ import routeFx from "@fixtures/route.json";
 import assignFx from "@fixtures/assign.json";
 import assignUnbalancedFx from "@fixtures/assign_unbalanced.json";
 import assignAdjustFx from "@fixtures/assign_adjust.json";
+import assignAdjustMinFx from "@fixtures/assign_adjust_min.json";
+import assign4x5Fx from "@fixtures/assign_4x5.json";
 import craftFx from "@fixtures/craft.json";
 import craft42Fx from "@fixtures/craft_42.json";
 import craftTwoPhaseFx from "@fixtures/craft_twophase.json";
@@ -18,7 +20,7 @@ export const USE_FIXTURES = import.meta.env.VITE_USE_FIXTURES !== "false";
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 /** Extra canned results for tabs that want to demo a special case (Matchups: the cover/adjust loop). */
-export const FIXTURE_EXTRAS = { assignAdjust: assignAdjustFx };
+export const FIXTURE_EXTRAS = { assignAdjust: assignAdjustFx, assignAdjustMin: assignAdjustMinFx };
 
 /**
  * Fixture mode answers from a handful of canned results, so interactive controls only "work" at these points.
@@ -26,7 +28,7 @@ export const FIXTURE_EXTRAS = { assignAdjust: assignAdjustFx };
  */
 export const FIXTURE_LIMITS =
   "crafting: <42 min infeasible, 42 min = 111, otherwise the 50-minute plan; " +
-  "matchups: any non-square grid = the 5x4 case, any square grid = the demo grid; " +
+  "matchups: 5x5 = the 445 demo, 5x4 = 385, 4x5 = 349, 4x4 = the adjust cases (maximize 116, minimize 17), any other grid gets the nearest of these; " +
   "map: dragging a point does not change the route or hull.";
 
 async function live(method, path, body) {
@@ -51,8 +53,12 @@ function craftFixture(req) {
   return req.method === "twophase" ? craftTwoPhaseFx : craftFx;
 }
 
-function assignFixture(scores) {
-  const square = scores.every((row) => row.length === scores.length);
+function assignFixture(scores, maximize = true) {
+  const rows = scores.length;
+  const cols = scores[0]?.length ?? 0;
+  if (rows === 4 && cols === 4) return maximize ? assignAdjustFx : assignAdjustMinFx; // cover + adjust loop
+  if (rows === 4 && cols === 5) return assign4x5Fx; // more bosses than weapons
+  const square = scores.every((row) => row.length === rows);
   return square ? assignFx : assignUnbalancedFx;
 }
 
@@ -66,7 +72,7 @@ export const api = {
   route: (req) => (USE_FIXTURES ? later(routeFx) : live("POST", "/api/route", req)),
 
   assign: (scores, maximize = true) =>
-    USE_FIXTURES ? later(assignFixture(scores)) : live("POST", "/api/assign", { scores, maximize }),
+    USE_FIXTURES ? later(assignFixture(scores, maximize)) : live("POST", "/api/assign", { scores, maximize }),
 
   /** req: { time_limit, recipes, limits, method: "bigm" | "twophase" } */
   craft: (req) => (USE_FIXTURES ? later(craftFixture(req)) : live("POST", "/api/craft", req)),

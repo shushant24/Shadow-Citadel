@@ -5,9 +5,8 @@ from typing import Dict, List
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from api._stub import not_implemented
-from envelope import envelope  # noqa: F401  (use when implementing /api/hull)
 from paths import SCENARIO_PATH
+from solvers.hull import convex_hull
 
 router = APIRouter()
 
@@ -24,5 +23,4 @@ def get_scenario() -> dict:
 
 @router.post("/hull")
 def post_hull(req: HullRequest) -> dict:
-    # TODO(Part 5): call solvers.hull.convex_hull(req.points) and wrap in envelope()
-    raise not_implemented(5, "/api/hull")
+    return convex_hull(req.points)

@@ -1,0 +1,332 @@
+{
+  "status": "optimal",
+  "answer": {
+    "pairs": [
+      [
+        1,
+        4
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        4,
+        1
+      ]
+    ],
+    "total": 17,
+    "unassigned": {
+      "rows": [],
+      "cols": []
+    }
+  },
+  "steps": [
+    {
+      "phase": "convert",
+      "matrix": [
+        [
+          6,
+          6,
+          6,
+          3
+        ],
+        [
+          7,
+          7,
+          8,
+          9
+        ],
+        [
+          7,
+          9,
+          2,
+          9
+        ],
+        [
+          5,
+          7,
+          4,
+          5
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "Minimization costs used directly"
+    },
+    {
+      "phase": "row_reduce",
+      "matrix": [
+        [
+          3,
+          3,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          2
+        ],
+        [
+          5,
+          7,
+          0,
+          7
+        ],
+        [
+          1,
+          3,
+          0,
+          1
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "Subtract the minimum of each row from every value in that row."
+    },
+    {
+      "phase": "col_reduce",
+      "matrix": [
+        [
+          3,
+          3,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          2
+        ],
+        [
+          5,
+          7,
+          0,
+          7
+        ],
+        [
+          1,
+          3,
+          0,
+          1
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "Subtract the minimum of each column from every value in that column."
+    },
+    {
+      "phase": "cover",
+      "matrix": [
+        [
+          3,
+          3,
+          3,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          2
+        ],
+        [
+          5,
+          7,
+          0,
+          7
+        ],
+        [
+          1,
+          3,
+          0,
+          1
+        ]
+      ],
+      "covered_rows": [
+        1,
+        2
+      ],
+      "covered_cols": [
+        3
+      ],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "Cover all zeros with a minimum number of lines (3 of 4)."
+    },
+    {
+      "phase": "adjust",
+      "matrix": [
+        [
+          3,
+          3,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          2
+        ],
+        [
+          4,
+          6,
+          0,
+          6
+        ],
+        [
+          0,
+          2,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [
+        1,
+        2
+      ],
+      "covered_cols": [
+        3
+      ],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "Subtract delta from uncovered cells and add it at intersections of two covering lines.",
+      "delta": 1
+    },
+    {
+      "phase": "cover",
+      "matrix": [
+        [
+          3,
+          3,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          2
+        ],
+        [
+          4,
+          6,
+          0,
+          6
+        ],
+        [
+          0,
+          2,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "Cover all zeros with a minimum number of lines (4 of 4)."
+    },
+    {
+      "phase": "final",
+      "matrix": [
+        [
+          3,
+          3,
+          4,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          2
+        ],
+        [
+          4,
+          6,
+          0,
+          6
+        ],
+        [
+          0,
+          2,
+          0,
+          0
+        ]
+      ],
+      "covered_rows": [],
+      "covered_cols": [],
+      "dummy_rows": [],
+      "dummy_cols": [],
+      "note": "The selected zero cells define the optimal assignment; dummy matches are included in selected.",
+      "selected": [
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          1
+        ]
+      ]
+    }
+  ],
+  "_fixture_note": "Plan 4x4 minimization example (demo plan 3.3) that needs an adjust step (delta=1) with total cost 17.",
+  "input": {
+    "scores": [
+      [
+        6,
+        6,
+        6,
+        3
+      ],
+      [
+        7,
+        7,
+        8,
+        9
+      ],
+      [
+        7,
+        9,
+        2,
+        9
+      ],
+      [
+        5,
+        7,
+        4,
+        5
+      ]
+    ],
+    "maximize": false
+  }
+}

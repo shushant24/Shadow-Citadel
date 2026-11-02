@@ -13,7 +13,7 @@ import contract
 
 KINDS = {
     "hull": "hull", "route": "route", "assign": "assign", "assign_adjust": "assign",
-    "assign_unbalanced": "assign", "craft": "craft", "craft_42": "craft", "craft_twophase": "craft",
+    "assign_unbalanced": "assign", "assign_4x5": "assign", "assign_adjust_min": "assign", "craft": "craft", "craft_42": "craft", "craft_twophase": "craft",
     "craft_infeasible": "craft", "pipeline": "pipeline", "pipeline_naive": "pipeline",
     "experiments": "experiments",
 }
@@ -78,6 +78,17 @@ def test_assign_fixtures_replay_to_their_answers(fixture):
     assert unb["steps"][0]["dummy_cols"] == [5] and len(unb["steps"][0]["matrix"]) == 5
     assert [s["phase"] for s in adj["steps"]].count("cover") == 2 and "adjust" in [s["phase"] for s in adj["steps"]]
     for fx in (full, unb, adj):
+        last = fx["steps"][-1]
+        assert last["phase"] == "final" and len(last["selected"]) == len(last["matrix"])
+
+
+def test_wide_and_minimize_assign_fixtures(fixture):
+    wide, adj_min = fixture("assign_4x5"), fixture("assign_adjust_min")
+    assert wide["answer"]["total"] == 349 and wide["answer"]["unassigned"] == {"rows": [], "cols": [4]}
+    assert wide["steps"][0]["dummy_rows"] == [5] and len(wide["steps"][0]["matrix"]) == 5  # more bosses than weapons
+    phases = [s["phase"] for s in adj_min["steps"]]
+    assert adj_min["answer"]["total"] == 17 and phases.count("cover") == 2 and "adjust" in phases
+    for fx in (wide, adj_min):
         last = fx["steps"][-1]
         assert last["phase"] == "final" and len(last["selected"]) == len(last["matrix"])
 

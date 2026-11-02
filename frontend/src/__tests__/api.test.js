@@ -29,6 +29,17 @@ test("fixture assign: square grid is the 445 demo, a 5x4 grid is the unbalanced 
   expect(FIXTURE_EXTRAS.assignAdjust.steps.some((s) => s.phase === "adjust")).toBe(true);
 });
 
+test("fixture assign: 4x4 gives the adjust cases (116 maximize, 17 minimize) and 4x5 gives 349", async () => {
+  const max4 = await api.assign(FIXTURE_EXTRAS.assignAdjust.input.scores, true);
+  expect(max4.answer.total).toBe(116);
+  const min4 = await api.assign(FIXTURE_EXTRAS.assignAdjustMin.input.scores, false);
+  expect(min4.answer.total).toBe(17);
+  expect(min4.steps.some((s) => s.phase === "adjust")).toBe(true);
+  const wide = await api.assign(scenario.weapon_boss_scores.slice(0, 4));
+  expect(wide.answer.total).toBe(349);
+  expect(wide.answer.unassigned.cols).toEqual([4]);
+});
+
 test("fixture pipeline: optimal route totals 562, naive route makes crafting infeasible", async () => {
   expect((await api.pipeline(scenario)).answer.total).toBe(562);
   const naive = await api.pipeline(scenario, "nearest_neighbour");
