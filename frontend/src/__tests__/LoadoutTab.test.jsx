@@ -29,8 +29,12 @@ describe("formatBigM utility", () => {
 });
 
 describe("LoadoutTab Component (Part 9)", () => {
-  it("renders optimal crafting solution by default from scenario", async () => {
+  it("renders standard header, optimal crafting solution and dynamic shadow prices", async () => {
     render(<LoadoutTab scenario={scenarioFixture} />);
+
+    // Header check
+    expect(screen.getByRole("heading", { level: 2, name: "Loadout" })).toBeInTheDocument();
+    expect(screen.getByText("Stage 4: Consumable Crafting & Simplex LP Optimization")).toBeInTheDocument();
 
     // Wait for the data to load and render optimal score
     await waitFor(() => {
@@ -41,7 +45,7 @@ describe("LoadoutTab Component (Part 9)", () => {
     expect(screen.getByText("Crafting Bonus (Z)")).toBeInTheDocument();
     expect(screen.getByText("Combat Score")).toBeInTheDocument();
     expect(screen.getByText("Total Raid Score")).toBeInTheDocument();
-    expect(screen.getByText("562")).toBeInTheDocument(); // 445 + 117
+    expect(screen.getByText("562")).toBeInTheDocument(); // 445 (live pipeline combat) + 117
 
     // 4 Recipe Allocation Cards
     expect(screen.getByTestId("recipe-card-x1")).toHaveTextContent("Health Potion");
@@ -52,6 +56,9 @@ describe("LoadoutTab Component (Part 9)", () => {
     expect(screen.getByTestId("recipe-card-x3")).toHaveTextContent("4");
     expect(screen.getByTestId("recipe-card-x4")).toHaveTextContent("Shield Scroll");
     expect(screen.getByTestId("recipe-card-x4")).toHaveTextContent("3");
+
+    // Dynamic slots label from limits.slots
+    expect(document.querySelector(".loadout-header-tag")).toHaveTextContent("Total Items: 14 / 14 Slots");
 
     // Resource Consumption Meters
     expect(screen.getByTestId("meter-time")).toHaveTextContent("Crafting Time");
@@ -72,13 +79,33 @@ describe("LoadoutTab Component (Part 9)", () => {
     expect(screen.getByTestId("meter-survival")).toHaveTextContent("Survival Points");
     expect(screen.getByTestId("meter-survival")).toHaveTextContent("+14 pts Surplus");
 
-    // Bottleneck & Shadow Prices
+    // Bottleneck Alert
     expect(screen.getByLabelText("Bottleneck Alert")).toHaveTextContent(
       "Crafting time is the bottleneck: each extra minute adds 0.75 score."
     );
+
+    // Dynamic shadow prices and interpretations
     expect(screen.getByTestId("shadow-price-time")).toHaveTextContent("+0.75 pts / min");
+    expect(screen.getByTestId("shadow-price-time")).toHaveTextContent(
+      "+0.75 raid score per additional minute"
+    );
+
     expect(screen.getByTestId("shadow-price-weight")).toHaveTextContent("+0.5 pts / kg");
+    expect(screen.getByTestId("shadow-price-weight")).toHaveTextContent(
+      "+0.5 raid score per additional kg"
+    );
+
     expect(screen.getByTestId("shadow-price-slots")).toHaveTextContent("+4.25 pts / slot");
+    expect(screen.getByTestId("shadow-price-slots")).toHaveTextContent(
+      "+4.25 raid score per additional slot"
+    );
+
+    expect(screen.getByTestId("shadow-price-stamina")).toHaveTextContent(
+      "Non-binding: surplus/slack remains"
+    );
+    expect(screen.getByTestId("shadow-price-survival")).toHaveTextContent(
+      "Non-binding: surplus/slack remains"
+    );
   });
 
   it("renders simplex tableau stepper with pivot cell and symbolic Big-M display", async () => {
@@ -144,7 +171,7 @@ describe("LoadoutTab Component (Part 9)", () => {
     expect(screen.getByTestId("recipe-card-x4")).toHaveTextContent("1");
   });
 
-  it("handles Naive Route Infeasible preset (40 min) with readable alert", async () => {
+  it("handles Naive Route Infeasible preset (40 min) with dynamic reason and no unverified claims", async () => {
     render(<LoadoutTab scenario={scenarioFixture} />);
 
     await waitFor(() => {
@@ -164,8 +191,49 @@ describe("LoadoutTab Component (Part 9)", () => {
     );
     expect(infeasibleMessages.length).toBeGreaterThan(0);
 
+    // Verify dynamic explanation contains computed numbers
+    const explanation = screen.getByText(/The inventory capacity constraint requires filling all 14 slots/i);
+    expect(explanation).toBeInTheDocument();
+    expect(explanation).toHaveTextContent("14 slots × 3 min/item");
+    expect(explanation).toHaveTextContent("minimum crafting time required is 42 minutes");
+
+    // Verify absence of unparsed math LaTeX dollar signs
+    expect(explanation.textContent).not.toContain("$");
+
+    // Recommendation text should be actionable and not hardcode 70/80 min
+    const recommendation = screen.getByText(/Increase available crafting time to at least 42 minutes/i);
+    expect(recommendation).toBeInTheDocument();
+
     // Replay stepper is still rendered and accessible in infeasible state!
     expect(screen.getByLabelText("Simplex Tableau Grid")).toBeInTheDocument();
+  });
+
+  it("allows overriding constraint limits (weight, slots, stamina, survival)", async () => {
+    render(<LoadoutTab scenario={scenarioFixture} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("117")).toBeInTheDocument();
+    });
+
+    // Edit weight limit input
+    const weightInput = screen.getByLabelText("Max Weight");
+    expect(weightInput).toHaveValue(40);
+    fireEvent.change(weightInput, { target: { value: "35" } });
+
+    await waitFor(() => {
+      expect(weightInput).toHaveValue(35);
+    });
+
+    // Reset button should appear
+    const resetLimitsBtn = screen.getByTestId("btn-reset-limits");
+    expect(resetLimitsBtn).toBeInTheDocument();
+
+    fireEvent.click(resetLimitsBtn);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Max Weight")).toHaveValue(40);
+      expect(screen.queryByTestId("btn-reset-limits")).not.toBeInTheDocument();
+    });
   });
 
   it("switches to Two-Phase method and renders Phase 1 / Phase 2 trace", async () => {

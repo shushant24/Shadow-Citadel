@@ -8,9 +8,10 @@ const RECIPE_META = [
   { name: "Shield Scroll", varName: "x4", icon: "🛡️", baseScore: 7 },
 ];
 
-export default function PlanCard({ answer, combatScore = 445, recipes }) {
+export default function PlanCard({ answer, combatScore = 445, recipes, limits }) {
   if (!answer) return null;
 
+  const maxSlots = limits?.slots ?? 14;
   const x = answer.x ?? [];
   const z = answer.z ?? 0;
   const totalScore = typeof z === "number" && typeof combatScore === "number" ? combatScore + z : null;
@@ -46,7 +47,7 @@ export default function PlanCard({ answer, combatScore = 445, recipes }) {
         <div className="loadout-section-header">
           <h3>Crafting Allocation Plan</h3>
           <span className="loadout-header-tag">
-            Total Items: <strong>{formatNum(totalItems)}</strong> / 14 Slots
+            Total Items: <strong>{formatNum(totalItems)}</strong> / {maxSlots} Slots
           </span>
         </div>
 

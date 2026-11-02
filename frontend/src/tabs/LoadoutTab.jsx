@@ -11,23 +11,81 @@ import ResourceMeters from "./loadout/ResourceMeters.jsx";
 import SensitivityPanel from "./loadout/SensitivityPanel.jsx";
 import TableauView from "./loadout/TableauView.jsx";
 
-// Fixed optimal tour time from Stage 2 Hungarian TSP tour (70 min)
-const FIXTURE_OPTIMAL_TOUR_MIN = 70;
-const COMBAT_SCORE_DEFAULT = 445;
-
 export default function LoadoutTab({ scenario }) {
   const [method, setMethod] = useState("bigm");
-  const [customTime, setCustomTime] = useState(null);
   const [showTableau, setShowTableau] = useState(true);
 
-  // Derive default craft time from scenario.total_time (120 - 70 = 50 min)
-  const derivedCraftTime = Math.max(0, (scenario?.total_time ?? 120) - FIXTURE_OPTIMAL_TOUR_MIN);
+  // 1. Live Tour Time & Combat Score from api.pipeline
+  const [livePipeline, setLivePipeline] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    api.pipeline(scenario, "optimal")
+      .then((res) => {
+        if (active && res?.answer) {
+          setLivePipeline(res.answer);
+        }
+      })
+      .catch(() => {
+        // Fallback gracefully to fixture defaults if offline / pipeline unavailable
+      });
+    return () => {
+      active = false;
+    };
+  }, [scenario]);
+
+  const liveTourTime = livePipeline?.tour_time ?? 70;
+  const liveCombatScore = livePipeline?.combat ?? 445;
+
+  // 2. Derive crafting time from scenario.total_time minus live tour time
+  const derivedCraftTime = Math.max(0, (scenario?.total_time ?? 120) - liveTourTime);
+
+  // Custom slider override
+  const [customTime, setCustomTime] = useState(null);
   const activeCraftTime = customTime ?? derivedCraftTime;
 
-  // Reset custom time override when scenario.total_time is edited in ScenarioPanel
+  // Slider draft state for smooth UI interaction and 200ms debounce
+  const [sliderDraft, setSliderDraft] = useState(activeCraftTime);
+
+  useEffect(() => {
+    setSliderDraft(activeCraftTime);
+  }, [activeCraftTime]);
+
+  // Reset custom time override when scenario.total_time or tour time changes
   useEffect(() => {
     setCustomTime(null);
-  }, [scenario?.total_time]);
+  }, [scenario?.total_time, liveTourTime]);
+
+  // 200ms debounce on slider change to avoid spamming api.craft
+  useEffect(() => {
+    if (sliderDraft === activeCraftTime) return;
+    const timer = setTimeout(() => {
+      setCustomTime(sliderDraft);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [sliderDraft, activeCraftTime]);
+
+  // 3. Local limit overrides (weight, stamina, survival, slots)
+  const [customLimits, setCustomLimits] = useState({});
+
+  useEffect(() => {
+    setCustomLimits({});
+  }, [scenario?.limits]);
+
+  const activeLimits = useMemo(() => ({
+    weight: customLimits.weight ?? scenario?.limits?.weight ?? 40,
+    stamina: customLimits.stamina ?? scenario?.limits?.stamina ?? 90,
+    survival_min: customLimits.survival_min ?? scenario?.limits?.survival_min ?? 30,
+    slots: customLimits.slots ?? scenario?.limits?.slots ?? 14,
+  }), [customLimits, scenario?.limits]);
+
+  const hasLimitOverrides = Object.keys(customLimits).length > 0;
+
+  // Dynamic minimum craft time calculation for infeasibility diagnosis
+  const slotsLimit = activeLimits.slots;
+  const recipeTimes = scenario?.recipes?.time ?? [3, 4, 5, 3];
+  const minRecipeTime = recipeTimes.length > 0 ? Math.min(...recipeTimes) : 3;
+  const minCraftTimeNeeded = slotsLimit * minRecipeTime;
 
   // Request state
   const [data, setData] = useState(null);
@@ -35,7 +93,7 @@ export default function LoadoutTab({ scenario }) {
   const [error, setError] = useState(null);
   const activeReqIdRef = useRef(0);
 
-  const fetchCraft = async (tLimit, mth) => {
+  const fetchCraft = async (tLimit, mth, lmts) => {
     const reqId = ++activeReqIdRef.current;
     setLoading(true);
     setError(null);
@@ -44,7 +102,7 @@ export default function LoadoutTab({ scenario }) {
       const res = await api.craft({
         time_limit: tLimit,
         recipes: scenario?.recipes,
-        limits: scenario?.limits,
+        limits: lmts,
         method: mth,
       });
       if (reqId === activeReqIdRef.current) {
@@ -62,12 +120,13 @@ export default function LoadoutTab({ scenario }) {
   };
 
   useEffect(() => {
-    fetchCraft(activeCraftTime, method);
-  }, [activeCraftTime, method, scenario?.recipes, scenario?.limits]);
+    fetchCraft(activeCraftTime, method, activeLimits);
+  }, [activeCraftTime, method, scenario?.recipes, activeLimits]);
 
   // Presets
   const applyPreset = (presetTime, presetMethod = "bigm") => {
     setCustomTime(presetTime);
+    setSliderDraft(presetTime);
     setMethod(presetMethod);
   };
 
@@ -78,22 +137,25 @@ export default function LoadoutTab({ scenario }) {
 
   const isCustomTimeActive = customTime !== null && customTime !== derivedCraftTime;
 
+  // In fixture mode, canned data is solved at 50 min, 42 min, or 40 min
+  const effectiveTimeLimit = USE_FIXTURES
+    ? (data?.answer?.z === 111 ? 42 : 50)
+    : activeCraftTime;
+
   return (
     <section className="panel loadout-panel" aria-label="Loadout">
-      {/* Tab Header */}
-      <div className="loadout-header">
-        <div className="loadout-title-block">
-          <h2>Stage 4: Consumable Crafting (Simplex LP)</h2>
-          <p className="loadout-subtitle">
-            Maximize raid bonus score within remaining raid time, carry weight, stamina, survival, and inventory slots.
-          </p>
+      {/* Header bar matching Matchups & Map tabs */}
+      <div className="panel-header">
+        <div>
+          <h2>Loadout</h2>
+          <p className="subtitle">Stage 4: Consumable Crafting & Simplex LP Optimization</p>
         </div>
 
         {/* Method Switch: Big-M vs Two-Phase */}
-        <div className="segmented loadout-method-switch" role="group" aria-label="Simplex Method">
+        <div className="segmented-tabs" role="group" aria-label="Simplex Method">
           <button
             type="button"
-            className={`btn-seg ${method === "bigm" ? "active" : ""}`}
+            className={`segment-tab ${method === "bigm" ? "active" : ""}`}
             onClick={() => setMethod("bigm")}
             data-testid="method-bigm"
           >
@@ -101,7 +163,7 @@ export default function LoadoutTab({ scenario }) {
           </button>
           <button
             type="button"
-            className={`btn-seg ${method === "twophase" ? "active" : ""}`}
+            className={`segment-tab ${method === "twophase" ? "active" : ""}`}
             onClick={() => setMethod("twophase")}
             data-testid="method-twophase"
           >
@@ -110,42 +172,42 @@ export default function LoadoutTab({ scenario }) {
         </div>
       </div>
 
-      {/* Preset Buttons & Time Slider */}
+      {/* Preset Buttons & Controls */}
       <div className="loadout-controls-card">
         <div className="loadout-presets-row">
           <span className="presets-label">Quick Scenarios:</span>
           <div className="presets-btn-group">
             <button
               type="button"
-              className={`btn btn-sm ${isOptimalPreset ? "btn-primary" : "btn-secondary"}`}
+              className={`pill-btn ${isOptimalPreset ? "active" : ""}`}
               onClick={() => applyPreset(50, "bigm")}
               data-testid="preset-optimal"
             >
-              ⭐ Optimal (50 min, Z=117)
+              Optimal (50 min, Z=117)
             </button>
             <button
               type="button"
-              className={`btn btn-sm ${isBoundaryPreset ? "btn-primary" : "btn-secondary"}`}
+              className={`pill-btn ${isBoundaryPreset ? "active" : ""}`}
               onClick={() => applyPreset(42, "bigm")}
               data-testid="preset-boundary"
             >
-              ⚠️ Tight Boundary (42 min, Z=111)
+              Tight Boundary (42 min, Z=111)
             </button>
             <button
               type="button"
-              className={`btn btn-sm ${isInfeasiblePreset ? "btn-primary" : "btn-secondary"}`}
+              className={`pill-btn ${isInfeasiblePreset ? "active" : ""}`}
               onClick={() => applyPreset(40, "bigm")}
               data-testid="preset-infeasible"
             >
-              🚫 Naive Route Infeasible (40 min)
+              Naive Route Infeasible (40 min)
             </button>
             <button
               type="button"
-              className={`btn btn-sm ${isTwoPhasePreset ? "btn-primary" : "btn-secondary"}`}
+              className={`pill-btn ${isTwoPhasePreset ? "active" : ""}`}
               onClick={() => applyPreset(50, "twophase")}
               data-testid="preset-twophase"
             >
-              🔄 Two-Phase Trace (50 min)
+              Two-Phase Trace (50 min)
             </button>
           </div>
         </div>
@@ -155,9 +217,9 @@ export default function LoadoutTab({ scenario }) {
           <div className="slider-header-row">
             <label htmlFor="craft-time-slider" className="slider-label">
               <strong>Available Crafting Time:</strong>{" "}
-              <span className="slider-val-highlight">{activeCraftTime} minutes</span>
-              {activeCraftTime < 42 && (
-                <span className="slider-warn-tag"> (Infeasible Region: &lt; 42 min)</span>
+              <span className="slider-val-highlight">{sliderDraft} minutes</span>
+              {sliderDraft < minCraftTimeNeeded && (
+                <span className="slider-warn-tag"> (Infeasible Region: &lt; {minCraftTimeNeeded} min)</span>
               )}
               {isCustomTimeActive && (
                 <span className="slider-override-tag"> (Manual Slider Override)</span>
@@ -168,7 +230,10 @@ export default function LoadoutTab({ scenario }) {
               <button
                 type="button"
                 className="btn btn-xs btn-secondary"
-                onClick={() => setCustomTime(null)}
+                onClick={() => {
+                  setCustomTime(null);
+                  setSliderDraft(derivedCraftTime);
+                }}
                 data-testid="btn-reset-time"
               >
                 Reset to Scenario Time ({derivedCraftTime} min)
@@ -182,8 +247,8 @@ export default function LoadoutTab({ scenario }) {
             min={30}
             max={70}
             step={1}
-            value={activeCraftTime}
-            onChange={(e) => setCustomTime(Number(e.target.value))}
+            value={sliderDraft}
+            onChange={(e) => setSliderDraft(Number(e.target.value))}
             className="step-scrubber loadout-time-slider"
             aria-label="Available Crafting Time Slider"
           />
@@ -197,10 +262,91 @@ export default function LoadoutTab({ scenario }) {
           </div>
         </div>
 
+        {/* Constraint Limits Overrides (Weight, Slots, Stamina, Survival) */}
+        <div className="loadout-limits-bar">
+          <span className="limits-bar-label">Constraint Limits:</span>
+          <div className="loadout-limits-inputs">
+            <div className="limit-input-group">
+              <label htmlFor="limit-input-weight">Weight (kg):</label>
+              <input
+                id="limit-input-weight"
+                aria-label="Max Weight"
+                type="number"
+                min="0"
+                step="any"
+                className="form-input form-input-sm"
+                value={activeLimits.weight}
+                onChange={(e) =>
+                  setCustomLimits((prev) => ({ ...prev, weight: Number(e.target.value) }))
+                }
+              />
+            </div>
+
+            <div className="limit-input-group">
+              <label htmlFor="limit-input-slots">Slots:</label>
+              <input
+                id="limit-input-slots"
+                aria-label="Max Slots"
+                type="number"
+                min="1"
+                step="1"
+                className="form-input form-input-sm"
+                value={activeLimits.slots}
+                onChange={(e) =>
+                  setCustomLimits((prev) => ({ ...prev, slots: Number(e.target.value) }))
+                }
+              />
+            </div>
+
+            <div className="limit-input-group">
+              <label htmlFor="limit-input-stamina">Stamina:</label>
+              <input
+                id="limit-input-stamina"
+                aria-label="Max Stamina"
+                type="number"
+                min="0"
+                step="any"
+                className="form-input form-input-sm"
+                value={activeLimits.stamina}
+                onChange={(e) =>
+                  setCustomLimits((prev) => ({ ...prev, stamina: Number(e.target.value) }))
+                }
+              />
+            </div>
+
+            <div className="limit-input-group">
+              <label htmlFor="limit-input-survival">Survival Min:</label>
+              <input
+                id="limit-input-survival"
+                aria-label="Min Survival"
+                type="number"
+                min="0"
+                step="any"
+                className="form-input form-input-sm"
+                value={activeLimits.survival_min}
+                onChange={(e) =>
+                  setCustomLimits((prev) => ({ ...prev, survival_min: Number(e.target.value) }))
+                }
+              />
+            </div>
+
+            {hasLimitOverrides && (
+              <button
+                type="button"
+                className="btn btn-xs btn-secondary"
+                onClick={() => setCustomLimits({})}
+                data-testid="btn-reset-limits"
+              >
+                Reset Limits
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Fixture mode notice if arbitrary slider chosen in fixture mode */}
         {USE_FIXTURES && activeCraftTime !== 50 && activeCraftTime !== 42 && activeCraftTime !== 40 && (
           <div className="alert alert-info loadout-fixture-hint">
-            💡 <strong>Fixture mode active:</strong> The nearest recorded run is displayed. Run backend live (<code>VITE_USE_FIXTURES=false</code>) to solve any arbitrary minute limit.
+            <strong>Fixture mode active:</strong> The nearest recorded run is displayed. Connect the live API (<code>VITE_USE_FIXTURES=false</code>) to solve arbitrary limits.
           </div>
         )}
       </div>
@@ -211,25 +357,24 @@ export default function LoadoutTab({ scenario }) {
         {data?.status === "infeasible" && (
           <div className="loadout-infeasible-card" data-testid="infeasible-card">
             <div className="infeasible-card-header">
-              <span className="infeasible-icon">⚠️</span>
+              <span className="alert-icon">⚠️</span>
               <h4>Crafting Plan Infeasible ({activeCraftTime} min available)</h4>
             </div>
 
             <p className="infeasible-message">
               {data.answer?.message ||
-                "With the remaining crafting time, the 14-slot loadout cannot satisfy all constraints."}
+                "With the remaining crafting time, the loadout cannot satisfy all constraints."}
             </p>
 
             <div className="infeasible-explanation">
-              <strong>Mathematical Reason:</strong> 14 inventory slots require at least 42 minutes to craft (
-              <code>14 slots × 3 min = 42 min</code> using the fastest recipe). With only {activeCraftTime} minutes,
-              an artificial variable ($a_5$) remains in the final basis at a positive level ({"> 0"}), rendering the plan
-              impossible.
+              <strong>Mathematical Reason:</strong> The inventory capacity constraint requires filling all {slotsLimit} slots.
+              Even crafting the fastest possible recipe ({minRecipeTime} min per item), the minimum crafting time
+              required is {minCraftTimeNeeded} minutes ({slotsLimit} slots × {minRecipeTime} min/item). With only {activeCraftTime} minutes
+              available, no valid combination of recipes can satisfy the inventory capacity requirement.
             </div>
 
             <div className="infeasible-action-hint">
-              <strong>Recommendation:</strong> Return to the <strong>Map</strong> tab and use the optimal Hungarian TSP route
-              (70 min) instead of the naive route (80 min) to unlock 50 minutes of crafting time.
+              <strong>Recommendation:</strong> Increase available crafting time to at least {minCraftTimeNeeded} minutes by choosing a faster raid route or extending the total raid time limit in the scenario overview.
             </div>
           </div>
         )}
@@ -240,15 +385,16 @@ export default function LoadoutTab({ scenario }) {
             {/* 1. Score Stats & Allocation Plan Cards */}
             <PlanCard
               answer={data.answer}
-              combatScore={COMBAT_SCORE_DEFAULT}
+              combatScore={liveCombatScore}
               recipes={scenario?.recipes}
+              limits={activeLimits}
             />
 
             {/* 2. Resource Consumption Meters */}
             <ResourceMeters
               answer={data.answer}
-              timeLimit={activeCraftTime}
-              limits={scenario?.limits}
+              timeLimit={effectiveTimeLimit}
+              limits={activeLimits}
               recipes={scenario?.recipes}
             />
 

@@ -1624,6 +1624,47 @@ body {
   font-size: 0.8rem;
 }
 
+.loadout-limits-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--bg-dark);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--panel-border);
+}
+
+.limits-bar-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.loadout-limits-inputs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.limit-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.limit-input-group label {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.form-input-sm {
+  width: 70px;
+  padding: 3px 6px;
+  font-size: 0.8rem;
+}
+
 /* Infeasible Card */
 .loadout-infeasible-card {
   background: rgba(239, 71, 111, 0.08);
