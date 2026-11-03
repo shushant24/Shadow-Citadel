@@ -35,4 +35,15 @@ To use the live API instead of fixtures: `cp frontend/.env.example frontend/.env
 - `tests/test_data_integrity.py` and `tests/test_no_forbidden_imports.py` guard the shared data and the "no library solvers" rule (checked with `ast`: no scipy / linprog / pulp inside `solvers/` or `api/`; use such tools only as test oracles in `tests/`).
 
 ## Status
-All solvers and tabs are stubs. `GET /api/scenario` and `GET /api/health` work; other endpoints return 501 until their part lands. The fixtures and contract are complete, so every tab can be built against realistic data today.
+- **Backend Solvers & APIs**:
+  - Part 1: Simplex, Big-M and Two-Phase LP solvers (`backend/solvers/simplex.py`, `bigm.py`, `twophase.py`)
+  - Part 2: Sensitivity analysis & crafting service (`solvers/sensitivity.py`, `api/api_craft.py`)
+  - Part 3: Hungarian assignment engine & service (`solvers/hungarian.py`, `api/api_assign.py`)
+  - Part 4: TSP solver & route service (`solvers/tsp.py`, `api/api_route.py`)
+  - Part 5 (first half): Convex hull & geometry (`solvers/hull.py`, `geometry.py`, `api/api_geometry.py`)
+  - Part 10 (first half): Baseline heuristics (`solvers/baselines.py`)
+- **Frontend Tabs**:
+  - Part 6: App shell, step player, and scenario controls (`App.jsx`, `StepPlayer.jsx`, `ScenarioPanel.jsx`)
+  - Part 7: Map tab with interactive SVG, convex hull, and tour recomputation (`tabs/MapTab.jsx`)
+  - Part 8: Matchups tab with Hungarian matrix reduction stepper (`tabs/MatchupsTab.jsx`)
+  - Part 9: Loadout tab with Simplex tableau stepper, resource meters, and sensitivity analysis (`tabs/LoadoutTab.jsx`)
