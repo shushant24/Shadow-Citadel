@@ -65,12 +65,22 @@ export default function LoadoutTab({ scenario }) {
     return () => clearTimeout(timer);
   }, [sliderDraft, activeCraftTime]);
 
-  // 3. Local limit overrides (weight, stamina, survival, slots)
+  // 3. Local limit overrides (weight, stamina, survival, slots) with 200ms debounce
   const [customLimits, setCustomLimits] = useState({});
+  const [draftLimits, setDraftLimits] = useState({});
 
   useEffect(() => {
     setCustomLimits({});
+    setDraftLimits({});
   }, [scenario?.limits]);
+
+  // 200ms debounce on draft limit changes before committing to customLimits
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCustomLimits(draftLimits);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [draftLimits]);
 
   const activeLimits = useMemo(() => ({
     weight: customLimits.weight ?? scenario?.limits?.weight ?? 40,
@@ -79,7 +89,14 @@ export default function LoadoutTab({ scenario }) {
     slots: customLimits.slots ?? scenario?.limits?.slots ?? 14,
   }), [customLimits, scenario?.limits]);
 
-  const hasLimitOverrides = Object.keys(customLimits).length > 0;
+  const displayLimits = useMemo(() => ({
+    weight: draftLimits.weight ?? scenario?.limits?.weight ?? 40,
+    stamina: draftLimits.stamina ?? scenario?.limits?.stamina ?? 90,
+    survival_min: draftLimits.survival_min ?? scenario?.limits?.survival_min ?? 30,
+    slots: draftLimits.slots ?? scenario?.limits?.slots ?? 14,
+  }), [draftLimits, scenario?.limits]);
+
+  const hasLimitOverrides = Object.keys(draftLimits).length > 0 || Object.keys(customLimits).length > 0;
 
   // Dynamic minimum craft time calculation for infeasibility diagnosis
   const slotsLimit = activeLimits.slots;
@@ -275,9 +292,9 @@ export default function LoadoutTab({ scenario }) {
                 min="0"
                 step="any"
                 className="form-input form-input-sm"
-                value={activeLimits.weight}
+                value={displayLimits.weight}
                 onChange={(e) =>
-                  setCustomLimits((prev) => ({ ...prev, weight: Number(e.target.value) }))
+                  setDraftLimits((prev) => ({ ...prev, weight: Number(e.target.value) }))
                 }
               />
             </div>
@@ -291,9 +308,9 @@ export default function LoadoutTab({ scenario }) {
                 min="1"
                 step="1"
                 className="form-input form-input-sm"
-                value={activeLimits.slots}
+                value={displayLimits.slots}
                 onChange={(e) =>
-                  setCustomLimits((prev) => ({ ...prev, slots: Number(e.target.value) }))
+                  setDraftLimits((prev) => ({ ...prev, slots: Number(e.target.value) }))
                 }
               />
             </div>
@@ -307,9 +324,9 @@ export default function LoadoutTab({ scenario }) {
                 min="0"
                 step="any"
                 className="form-input form-input-sm"
-                value={activeLimits.stamina}
+                value={displayLimits.stamina}
                 onChange={(e) =>
-                  setCustomLimits((prev) => ({ ...prev, stamina: Number(e.target.value) }))
+                  setDraftLimits((prev) => ({ ...prev, stamina: Number(e.target.value) }))
                 }
               />
             </div>
@@ -323,9 +340,9 @@ export default function LoadoutTab({ scenario }) {
                 min="0"
                 step="any"
                 className="form-input form-input-sm"
-                value={activeLimits.survival_min}
+                value={displayLimits.survival_min}
                 onChange={(e) =>
-                  setCustomLimits((prev) => ({ ...prev, survival_min: Number(e.target.value) }))
+                  setDraftLimits((prev) => ({ ...prev, survival_min: Number(e.target.value) }))
                 }
               />
             </div>
@@ -334,7 +351,10 @@ export default function LoadoutTab({ scenario }) {
               <button
                 type="button"
                 className="btn btn-xs btn-secondary"
-                onClick={() => setCustomLimits({})}
+                onClick={() => {
+                  setDraftLimits({});
+                  setCustomLimits({});
+                }}
                 data-testid="btn-reset-limits"
               >
                 Reset Limits
