@@ -2,6 +2,7 @@
 
 Run from the backend/ folder:  uvicorn app:app --reload --port 8000
 """
+import os
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -22,7 +23,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # Vite dev server
+    allow_origins=[
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    *[o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()],
+],
     allow_methods=["*"],
     allow_headers=["*"],
 )
