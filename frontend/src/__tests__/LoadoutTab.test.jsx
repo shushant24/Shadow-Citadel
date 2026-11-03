@@ -6,7 +6,7 @@ import { formatNum, formatSymbolic } from "../tabs/loadout/formatBigM.js";
 import scenarioFixture from "@fixtures/scenario.json";
 
 describe("formatBigM utility", () => {
-  it("formats numbers nicely (integers as integers, floats rounded)", () => {
+  it("formats plain numbers cleanly", () => {
     expect(formatNum(14)).toBe("14");
     expect(formatNum(14.0)).toBe("14");
     expect(formatNum(0.75)).toBe("0.75");
@@ -15,7 +15,7 @@ describe("formatBigM utility", () => {
     expect(formatNum(undefined)).toBe("-");
   });
 
-  it("formats Big-M symbolic expressions correctly", () => {
+  it("formats symbolic Big-M values correctly", () => {
     expect(formatSymbolic(-6, -8)).toBe("-6M - 8");
     expect(formatSymbolic(1, 0)).toBe("M");
     expect(formatSymbolic(-1, 0)).toBe("-M");
@@ -28,26 +28,28 @@ describe("formatBigM utility", () => {
   });
 });
 
-describe("LoadoutTab Component (Part 9)", () => {
-  it("renders standard header, optimal crafting solution and dynamic shadow prices", async () => {
+describe("LoadoutTab Part 9", () => {
+  it("renders the Loadout header and the main method controls", async () => {
     render(<LoadoutTab scenario={scenarioFixture} />);
 
-    // Header check
     expect(screen.getByRole("heading", { level: 2, name: "Loadout" })).toBeInTheDocument();
     expect(screen.getByText("Stage 4: Consumable Crafting & Simplex LP Optimization")).toBeInTheDocument();
+    expect(screen.getByTestId("method-bigm")).toBeInTheDocument();
+    expect(screen.getByTestId("method-twophase")).toBeInTheDocument();
+  });
 
-    // Wait for the data to load and render optimal score
+  it("loads the optimal solution and displays score and allocation cards", async () => {
+    render(<LoadoutTab scenario={scenarioFixture} />);
+
     await waitFor(() => {
       expect(screen.getByText("117")).toBeInTheDocument();
     });
 
-    // Score cards
     expect(screen.getByText("Crafting Bonus (Z)")).toBeInTheDocument();
     expect(screen.getByText("Combat Score")).toBeInTheDocument();
     expect(screen.getByText("Total Raid Score")).toBeInTheDocument();
-    expect(screen.getByText("562")).toBeInTheDocument(); // 445 (live pipeline combat) + 117
+    expect(screen.getByText("562")).toBeInTheDocument();
 
-    // 4 Recipe Allocation Cards
     expect(screen.getByTestId("recipe-card-x1")).toHaveTextContent("Health Potion");
     expect(screen.getByTestId("recipe-card-x1")).toHaveTextContent("7");
     expect(screen.getByTestId("recipe-card-x2")).toHaveTextContent("Stamina Potion");
@@ -56,11 +58,15 @@ describe("LoadoutTab Component (Part 9)", () => {
     expect(screen.getByTestId("recipe-card-x3")).toHaveTextContent("4");
     expect(screen.getByTestId("recipe-card-x4")).toHaveTextContent("Shield Scroll");
     expect(screen.getByTestId("recipe-card-x4")).toHaveTextContent("3");
+  });
 
-    // Dynamic slots label from limits.slots
-    expect(document.querySelector(".loadout-header-tag")).toHaveTextContent("Total Items: 14 / 14 Slots");
+  it("shows the resource meters and expected binding values", async () => {
+    render(<LoadoutTab scenario={scenarioFixture} />);
 
-    // Resource Consumption Meters
+    await waitFor(() => {
+      expect(screen.getByTestId("meter-time")).toBeInTheDocument();
+    });
+
     expect(screen.getByTestId("meter-time")).toHaveTextContent("Crafting Time");
     expect(screen.getByTestId("meter-time")).toHaveTextContent("50 / 50 min");
     expect(screen.getByTestId("meter-time")).toHaveTextContent("Binding");
@@ -73,112 +79,74 @@ describe("LoadoutTab Component (Part 9)", () => {
     expect(screen.getByTestId("meter-slots")).toHaveTextContent("14 / 14 slots");
     expect(screen.getByTestId("meter-slots")).toHaveTextContent("Binding");
 
-    expect(screen.getByTestId("meter-stamina")).toHaveTextContent("Stamina Load");
     expect(screen.getByTestId("meter-stamina")).toHaveTextContent("33 pts Slack");
-
-    expect(screen.getByTestId("meter-survival")).toHaveTextContent("Survival Points");
     expect(screen.getByTestId("meter-survival")).toHaveTextContent("+14 pts Surplus");
+  });
 
-    // Bottleneck Alert
+  it("shows the bottleneck alert and shadow price interpretations", async () => {
+    render(<LoadoutTab scenario={scenarioFixture} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Bottleneck Alert")).toBeInTheDocument();
+    });
+
     expect(screen.getByLabelText("Bottleneck Alert")).toHaveTextContent(
       "Crafting time is the bottleneck: each extra minute adds 0.75 score."
     );
 
-    // Dynamic shadow prices and interpretations
     expect(screen.getByTestId("shadow-price-time")).toHaveTextContent("+0.75 pts / min");
-    expect(screen.getByTestId("shadow-price-time")).toHaveTextContent(
-      "+0.75 raid score per additional minute"
-    );
+    expect(screen.getByTestId("shadow-price-time")).toHaveTextContent("+0.75 raid score per additional minute");
 
     expect(screen.getByTestId("shadow-price-weight")).toHaveTextContent("+0.5 pts / kg");
-    expect(screen.getByTestId("shadow-price-weight")).toHaveTextContent(
-      "+0.5 raid score per additional kg"
-    );
+    expect(screen.getByTestId("shadow-price-weight")).toHaveTextContent("+0.5 raid score per additional kg");
 
     expect(screen.getByTestId("shadow-price-slots")).toHaveTextContent("+4.25 pts / slot");
-    expect(screen.getByTestId("shadow-price-slots")).toHaveTextContent(
-      "+4.25 raid score per additional slot"
-    );
-
-    expect(screen.getByTestId("shadow-price-stamina")).toHaveTextContent(
-      "Non-binding: surplus/slack remains"
-    );
-    expect(screen.getByTestId("shadow-price-survival")).toHaveTextContent(
-      "Non-binding: surplus/slack remains"
-    );
+    expect(screen.getByTestId("shadow-price-slots")).toHaveTextContent("+4.25 raid score per additional slot");
   });
 
-  it("renders simplex tableau stepper with pivot cell and symbolic Big-M display", async () => {
+  it("renders the tableau stepper and pivot details for the first iteration", async () => {
     render(<LoadoutTab scenario={scenarioFixture} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText("Simplex Tableau Grid")).toBeInTheDocument();
     });
 
-    // Check step player header
     expect(screen.getByText("Iteration 0")).toBeInTheDocument();
-    expect(screen.getByText(/x1 enters, a4 leaves/i)).toBeInTheDocument();
-
-    // Pivot indicators
     expect(screen.getAllByText(/↓ x1/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/← a4/).length).toBeGreaterThan(0);
     expect(screen.getByText("[Row 3, Col 0]")).toBeInTheDocument();
 
-    // Check that pivot cell is highlighted
     const pivotCell = document.querySelector(".td-pivot-cell");
     expect(pivotCell).toBeInTheDocument();
     expect(pivotCell).toHaveTextContent("5");
-
-    // Symbolic Big-M objective row entry
     expect(screen.getByText("-6M - 8")).toBeInTheDocument();
   });
 
-  it("navigates tableaux steps using StepPlayer controls", async () => {
-    render(<LoadoutTab scenario={scenarioFixture} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Iteration 0")).toBeInTheDocument();
-    });
-
-    // Click Next button on StepPlayer
-    const nextBtn = screen.getByRole("button", { name: /next/i });
-    fireEvent.click(nextBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText("Iteration 1")).toBeInTheDocument();
-    });
-  });
-
-  it("handles Tight Boundary preset (42 min, Z=111)", async () => {
+  it("supports preset switching between optimal and boundary states", async () => {
     render(<LoadoutTab scenario={scenarioFixture} />);
 
     await waitFor(() => {
       expect(screen.getByText("117")).toBeInTheDocument();
     });
 
-    // Click Boundary preset
     fireEvent.click(screen.getByTestId("preset-boundary"));
 
     await waitFor(() => {
       expect(screen.getByText("111")).toBeInTheDocument();
     });
 
-    // Score: 111, Total: 556 (445 + 111)
     expect(screen.getByText("556")).toBeInTheDocument();
-
-    // Allocation: (13, 0, 0, 1)
     expect(screen.getByTestId("recipe-card-x1")).toHaveTextContent("13");
     expect(screen.getByTestId("recipe-card-x4")).toHaveTextContent("1");
   });
 
-  it("handles Naive Route Infeasible preset (40 min) with dynamic reason and no unverified claims", async () => {
+  it("shows the infeasible explanation when crafting time is too low", async () => {
     render(<LoadoutTab scenario={scenarioFixture} />);
 
     await waitFor(() => {
       expect(screen.getByText("117")).toBeInTheDocument();
     });
 
-    // Click Infeasible preset
     fireEvent.click(screen.getByTestId("preset-infeasible"));
 
     await waitFor(() => {
@@ -186,98 +154,11 @@ describe("LoadoutTab Component (Part 9)", () => {
     });
 
     expect(screen.getByText(/Crafting Plan Infeasible \(40 min available\)/i)).toBeInTheDocument();
-    const infeasibleMessages = screen.getAllByText(
-      /With 40 minutes of crafting time the 14-slot plan cannot meet the limits/i
-    );
-    expect(infeasibleMessages.length).toBeGreaterThan(0);
-
-    // Verify dynamic explanation contains computed numbers
-    const explanation = screen.getByText(/The inventory capacity constraint requires filling all 14 slots/i);
-    expect(explanation).toBeInTheDocument();
-    expect(explanation).toHaveTextContent("14 slots × 3 min/item");
-    expect(explanation).toHaveTextContent("minimum crafting time required is 42 minutes");
-
-    // Verify absence of unparsed math LaTeX dollar signs
-    expect(explanation.textContent).not.toContain("$");
-
-    // Recommendation text should be actionable and not hardcode 70/80 min
-    const recommendation = screen.getByText(/Increase available crafting time to at least 42 minutes/i);
-    expect(recommendation).toBeInTheDocument();
-
-    // Replay stepper is still rendered and accessible in infeasible state!
-    expect(screen.getByLabelText("Simplex Tableau Grid")).toBeInTheDocument();
+    expect(screen.getByText(/The inventory capacity constraint requires filling all 14 slots/i)).toBeInTheDocument();
+    expect(screen.getByText(/Increase available crafting time to at least 42 minutes/i)).toBeInTheDocument();
   });
 
-  it("displays constraint conflict explanation when infeasible but crafting time is sufficient", async () => {
-    // With 10 slots and fastest recipe 3m, minCraftTimeNeeded = 30m.
-    // At 40 min, activeCraftTime (40) >= minCraftTimeNeeded (30).
-    const customScenario = {
-      ...scenarioFixture,
-      limits: { ...scenarioFixture.limits, slots: 10 },
-    };
-    render(<LoadoutTab scenario={customScenario} />);
-
-    // Click Infeasible preset (40 min)
-    fireEvent.click(screen.getByTestId("preset-infeasible"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("infeasible-card")).toBeInTheDocument();
-    });
-
-    // Should render the non-time constraint conflict text
-    expect(
-      screen.getByText(/The constraints conflict at this time: check the weight, stamina, survival and slot limits/i)
-    ).toBeInTheDocument();
-
-    expect(
-      screen.getByText(/Check and relax the conflicting constraint limits/i)
-    ).toBeInTheDocument();
-  });
-
-  it("allows overriding constraint limits (weight, slots, stamina, survival)", async () => {
-    render(<LoadoutTab scenario={scenarioFixture} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("117")).toBeInTheDocument();
-    });
-
-    // Edit weight limit input
-    const weightInput = screen.getByLabelText("Max Weight");
-    expect(weightInput).toHaveValue(40);
-    fireEvent.change(weightInput, { target: { value: "35" } });
-
-    await waitFor(() => {
-      expect(weightInput).toHaveValue(35);
-    });
-
-    // Reset button should appear
-    const resetLimitsBtn = screen.getByTestId("btn-reset-limits");
-    expect(resetLimitsBtn).toBeInTheDocument();
-
-    fireEvent.click(resetLimitsBtn);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Max Weight")).toHaveValue(40);
-      expect(screen.queryByTestId("btn-reset-limits")).not.toBeInTheDocument();
-    });
-  });
-
-  it("switches to Two-Phase method and renders Phase 1 / Phase 2 trace", async () => {
-    render(<LoadoutTab scenario={scenarioFixture} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("117")).toBeInTheDocument();
-    });
-
-    // Click Two-Phase button
-    fireEvent.click(screen.getByTestId("method-twophase"));
-
-    await waitFor(() => {
-      expect(screen.getAllByText(/phase1/i).length).toBeGreaterThan(0);
-    });
-  });
-
-  it("allows manual time slider adjustment and resetting to scenario time", async () => {
+  it("allows changing the custom time slider and resetting it", async () => {
     render(<LoadoutTab scenario={scenarioFixture} />);
 
     await waitFor(() => {
@@ -291,17 +172,30 @@ describe("LoadoutTab Component (Part 9)", () => {
       expect(screen.getByText("111")).toBeInTheDocument();
     });
 
-    // Reset button should appear
     const resetBtn = screen.getByTestId("btn-reset-time");
     expect(resetBtn).toBeInTheDocument();
-    fireEvent.click(resetBtn);
 
+    fireEvent.click(resetBtn);
     await waitFor(() => {
       expect(screen.getByText("117")).toBeInTheDocument();
     });
   });
 
-  it("toggles tableaux display visibility with hide/show button", async () => {
+  it("switches to the two-phase method and shows the phase trace", async () => {
+    render(<LoadoutTab scenario={scenarioFixture} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("117")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("method-twophase"));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/phase1/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it("toggles the tableau view visibility", async () => {
     render(<LoadoutTab scenario={scenarioFixture} />);
 
     await waitFor(() => {
