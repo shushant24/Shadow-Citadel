@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { formatGainPct, formatMs } from "./formatters.js";
 
 /**
  * BenchmarkTable
@@ -25,9 +26,9 @@ export default function BenchmarkTable({ randomMaps }) {
 
   const {
     n = 20,
-    avg_route_gain_pct = 0,
-    avg_assign_gain_pct = 0,
-    avg_solver_ms = 0,
+    avg_route_gain_pct = null,
+    avg_assign_gain_pct = null,
+    avg_solver_ms = null,
     maps = [],
   } = randomMaps;
 
@@ -49,31 +50,31 @@ export default function BenchmarkTable({ randomMaps }) {
 
         <div className="benchmark-filter-row">
           <span className="filter-label">Filter by Nodes:</span>
-          <div className="segmented">
+          <div className="segmented-tabs" role="group" aria-label="Filter benchmark maps by node count">
             <button
               type="button"
-              className={`segment-btn ${filterNodes === "all" ? "active" : ""}`}
+              className={`segment-tab ${filterNodes === "all" ? "active" : ""}`}
               onClick={() => setFilterNodes("all")}
             >
               All ({maps.length})
             </button>
             <button
               type="button"
-              className={`segment-btn ${filterNodes === "8" ? "active" : ""}`}
+              className={`segment-tab ${filterNodes === "8" ? "active" : ""}`}
               onClick={() => setFilterNodes("8")}
             >
               8 Nodes
             </button>
             <button
               type="button"
-              className={`segment-btn ${filterNodes === "9" ? "active" : ""}`}
+              className={`segment-tab ${filterNodes === "9" ? "active" : ""}`}
               onClick={() => setFilterNodes("9")}
             >
               9 Nodes
             </button>
             <button
               type="button"
-              className={`segment-btn ${filterNodes === "10" ? "active" : ""}`}
+              className={`segment-tab ${filterNodes === "10" ? "active" : ""}`}
               onClick={() => setFilterNodes("10")}
             >
               10 Nodes
@@ -87,7 +88,7 @@ export default function BenchmarkTable({ randomMaps }) {
         <div className="stat-card">
           <span className="stat-label">Avg Route Gain</span>
           <span className="stat-value text-ok">
-            {Number(avg_route_gain_pct).toFixed(2)}%
+            {formatGainPct(avg_route_gain_pct, false)}
           </span>
           <span className="stat-sub">Travel time reduction (NN vs B&B)</span>
         </div>
@@ -95,7 +96,7 @@ export default function BenchmarkTable({ randomMaps }) {
         <div className="stat-card">
           <span className="stat-label">Avg Assignment Gain</span>
           <span className="stat-value text-accent">
-            +{Number(avg_assign_gain_pct).toFixed(2)}%
+            {formatGainPct(avg_assign_gain_pct, true)}
           </span>
           <span className="stat-sub">Score improvement (Greedy vs Hungarian)</span>
         </div>
@@ -103,7 +104,7 @@ export default function BenchmarkTable({ randomMaps }) {
         <div className="stat-card">
           <span className="stat-label">Avg Solver Runtime</span>
           <span className="stat-value">
-            {Number(avg_solver_ms).toFixed(2)} ms
+            {formatMs(avg_solver_ms)}
           </span>
           <span className="stat-sub">TSP B&B + Hungarian per map</span>
         </div>
@@ -151,7 +152,7 @@ export default function BenchmarkTable({ randomMaps }) {
                   +{Number(row.assign_gain_pct).toFixed(1)}%
                 </td>
                 <td className="text-right font-mono text-muted">
-                  {Number(row.solver_ms).toFixed(2)}
+                  {Number(row.solver_ms).toFixed(1)}
                 </td>
               </tr>
             ))}
@@ -165,16 +166,16 @@ export default function BenchmarkTable({ randomMaps }) {
                 Across sample
               </td>
               <td className="text-right text-bold text-ok font-mono">
-                -{Number(avg_route_gain_pct).toFixed(2)}%
+                -{formatGainPct(avg_route_gain_pct, false)}
               </td>
               <td colSpan={2} className="text-right text-muted font-mono">
                 Across sample
               </td>
               <td className="text-right text-bold text-ok font-mono">
-                +{Number(avg_assign_gain_pct).toFixed(2)}%
+                {formatGainPct(avg_assign_gain_pct, true)}
               </td>
               <td className="text-right text-bold font-mono">
-                {Number(avg_solver_ms).toFixed(2)} ms
+                {formatMs(avg_solver_ms)}
               </td>
             </tr>
           </tfoot>

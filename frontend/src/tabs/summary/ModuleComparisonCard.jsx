@@ -1,11 +1,12 @@
 import React from "react";
+import { formatGainPct } from "./formatters.js";
 
 /**
  * ModuleComparisonCard
  * Renders a comparative horizontal bar chart and metric breakdown for a single module:
  * - Route (80m -> 70m, 12.5% time saved)
  * - Assignment (414 -> 445, 7.5% score gained)
- * - Crafting (111 -> 117, 5.41% score gained)
+ * - Crafting (111 -> 117, 5.4% score gained)
  * - Whole Pipeline (Infeasible -> 562, Stage Dependency)
  */
 export default function ModuleComparisonCard({ moduleData }) {
@@ -30,23 +31,24 @@ export default function ModuleComparisonCard({ moduleData }) {
     ? "Infeasible"
     : naive !== null && naive !== undefined
     ? `${naive} ${unit}`
-    : "111 score (heuristic)";
+    : "n/a";
 
-  const optimizedDisplay = `${optimized} ${unit}`;
+  const optimizedDisplay = optimized !== null && optimized !== undefined
+    ? `${optimized} ${unit}`
+    : "n/a";
 
-  // Formatted gain text
+  // Formatted gain text using consistent 1-decimal formatter
   let gainText = "";
   let gainSub = "";
   if (isPipeline) {
     gainText = "Enables Feasibility";
     gainSub = "Without TSP optimization, crafting is impossible";
   } else if (gain_pct !== null && gain_pct !== undefined) {
-    const rounded = Number(gain_pct).toFixed(roundedDecimals(gain_pct));
-    gainText = isLowerBetter ? `${rounded}% Faster` : `+${rounded}% Score`;
-    gainSub = isLowerBetter ? "Reduction in raid travel time" : "Increase in damage / yield";
-  } else if (name.toLowerCase().includes("craft")) {
-    gainText = "+5.41% Score";
-    gainSub = "Increase over equal-split heuristic";
+    const formatted = formatGainPct(gain_pct, !isLowerBetter);
+    gainText = isLowerBetter ? `${formatted} Faster` : `${formatted} Score`;
+    gainSub = isLowerBetter ? "Reduction in raid travel time" : "Increase in combat damage / yield";
+  } else {
+    gainText = "n/a";
   }
 
   // Bar width calculation (relative scale 0% to 100%)
@@ -57,18 +59,20 @@ export default function ModuleComparisonCard({ moduleData }) {
     naivePct = 0;
     optPct = 100;
   } else if (isLowerBetter) {
-    // For route: naive (80) is the base (100%), opt (70) is 87.5%
-    const maxVal = Math.max(naive || 80, optimized || 70);
-    naivePct = maxVal > 0 ? ((naive || 80) / maxVal) * 100 : 100;
-    optPct = maxVal > 0 ? ((optimized || 70) / maxVal) * 100 : 87.5;
+    const numNaive = Number(naive) || 0;
+    const numOpt = Number(optimized) || 0;
+    const maxVal = Math.max(numNaive, numOpt);
+    naivePct = maxVal > 0 ? (numNaive / maxVal) * 100 : 100;
+    optPct = maxVal > 0 ? (numOpt / maxVal) * 100 : 100;
   } else {
-    // Higher is better: optimized is usually highest
-    const maxVal = Math.max(naive || 0, optimized || 1);
-    naivePct = maxVal > 0 ? ((naive || 0) / maxVal) * 100 : 0;
-    optPct = maxVal > 0 ? ((optimized || 0) / maxVal) * 100 : 100;
+    const numNaive = Number(naive) || 0;
+    const numOpt = Number(optimized) || 0;
+    const maxVal = Math.max(numNaive, numOpt);
+    naivePct = maxVal > 0 ? (numNaive / maxVal) * 100 : 0;
+    optPct = maxVal > 0 ? (numOpt / maxVal) * 100 : 100;
   }
 
-  // Module Icons / Badges
+  // Module Stage Badges
   const getModuleBadge = (modName) => {
     const lower = modName.toLowerCase();
     if (lower.includes("route")) return { tag: "Stage 2", label: "TSP Optimization" };
@@ -80,7 +84,10 @@ export default function ModuleComparisonCard({ moduleData }) {
   const meta = getModuleBadge(name);
 
   return (
-    <div className={`summary-module-card ${isPipeline ? "pipeline-card" : ""}`} data-testid={`module-card-${name.toLowerCase().replace(/\s+/g, "-")}`}>
+    <div
+      className={`summary-module-card ${isPipeline ? "pipeline-card" : ""}`}
+      data-testid={`module-card-${name.toLowerCase().replace(/\s+/g, "-")}`}
+    >
       <div className="module-card-header">
         <div className="module-title-group">
           <span className="module-stage-tag">{meta.tag}</span>
@@ -110,14 +117,14 @@ export default function ModuleComparisonCard({ moduleData }) {
               <div
                 className="summary-bar-fill fill-infeasible"
                 style={{ width: "100%" }}
-                title="Naive route leaves only 40 min crafting: infeasible"
+                title="Naive route leaves insufficient crafting time: infeasible"
               >
-                <span className="infeasible-stripe-label">Infeasible (40 min remaining)</span>
+                <span className="infeasible-stripe-label">Infeasible</span>
               </div>
             ) : (
               <div
                 className="summary-bar-fill fill-naive"
-                style={{ width: `${Math.min(100, Math.max(10, naivePct))}%` }}
+                style={{ width: `${Math.min(100, Math.max(8, naivePct))}%` }}
               />
             )}
           </div>
@@ -136,7 +143,7 @@ export default function ModuleComparisonCard({ moduleData }) {
           <div className="summary-bar-track">
             <div
               className="summary-bar-fill fill-opt"
-              style={{ width: `${Math.min(100, Math.max(10, optPct))}%` }}
+              style={{ width: `${Math.min(100, Math.max(8, optPct))}%` }}
             />
           </div>
         </div>
@@ -144,7 +151,7 @@ export default function ModuleComparisonCard({ moduleData }) {
 
       <div className="module-card-footer">
         <p className="module-insight">
-          {naive_note || getDefaultInsight(name)}
+          {naive_note || getDefaultInsight(name, naive, optimized, gain_pct)}
         </p>
         {gainSub && <span className="module-gain-sub">{gainSub}</span>}
       </div>
@@ -152,21 +159,18 @@ export default function ModuleComparisonCard({ moduleData }) {
   );
 }
 
-function roundedDecimals(num) {
-  if (Math.abs(num - Math.round(num)) < 0.05) return 1;
-  return 2;
-}
-
-function getDefaultInsight(name) {
+function getDefaultInsight(name, naive, opt, gain) {
   const lower = name.toLowerCase();
+  const formattedGain = formatGainPct(gain, false);
+
   if (lower.includes("route")) {
-    return "Nearest neighbour accumulates greedy penalties (80m); Hungarian relaxation + B&B finds global 70m tour, saving 10 minutes.";
+    return `Nearest neighbour incurs greedy penalties (${naive} min); Hungarian relaxation + B&B finds global ${opt}-minute tour (${formattedGain} faster).`;
   }
   if (lower.includes("assign")) {
-    return "Greedy assignment yields 414; Hungarian matrix reduction globally coordinates assignments for a maximum score of 445 (+7.5%).";
+    return `Greedy assignment yields ${naive}; Hungarian matrix reduction globally coordinates assignments for a maximum score of ${opt} (${formatGainPct(gain, true)}).`;
   }
   if (lower.includes("craft")) {
-    return "Equal-split heuristic hits binding limits; Two-Phase / Big-M Simplex exploits shadow prices ($0.75/min, $4.25/slot) to reach 117.";
+    return `Equal-split heuristic hits binding limits (${naive}); Two-Phase / Big-M Simplex exploits shadow prices (0.75 pts/min, 4.25 pts/slot) to reach ${opt}.`;
   }
-  return "With an 80m naive route, only 40m remain for crafting, rendering the 14-slot loadout infeasible. The 70m optimal tour enables the full 562-point plan.";
+  return `With a ${naive}m naive route, crafting is infeasible. The ${opt}m optimal tour enables the full plan.`;
 }

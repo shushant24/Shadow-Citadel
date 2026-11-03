@@ -2411,6 +2411,13 @@ body {
   align-items: center;
 }
 
+.demo-data-badge {
+  font-size: 0.75rem;
+  color: var(--warn);
+  font-style: italic;
+  font-weight: 600;
+}
+
 .summary-stat-grid {
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 14px;

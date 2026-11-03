@@ -9,6 +9,7 @@ import Status from "../components/Status.jsx";
 import ModuleComparisonCard from "./summary/ModuleComparisonCard.jsx";
 import BenchmarkTable from "./summary/BenchmarkTable.jsx";
 import ReportExportView from "./summary/ReportExportView.jsx";
+import { formatGainPct } from "./summary/formatters.js";
 
 const CANONICAL_MODULES_FALLBACK = [
   {
@@ -25,7 +26,7 @@ const CANONICAL_MODULES_FALLBACK = [
     naive: 414,
     optimized: 445,
     unit: "score",
-    gain_pct: 7.5,
+    gain_pct: 7.49,
     direction: "higher_is_better",
     naive_note: "Greedy picks leave suboptimal matchings; Hungarian algorithm globally coordinates all pairs to reach 445.",
   },
@@ -36,7 +37,7 @@ const CANONICAL_MODULES_FALLBACK = [
     unit: "score",
     gain_pct: 5.41,
     direction: "higher_is_better",
-    naive_note: "Equal-split heuristic at 50 min budget gives 111; Simplex optimizes resource shadow prices to reach 117.",
+    naive_note: "Equal-split heuristic at 50 min budget gives 111; Simplex optimizes resource shadow prices (0.75 pts/min, 4.25 pts/slot) to reach 117.",
   },
   {
     module: "Whole pipeline",
@@ -54,7 +55,9 @@ export default function SummaryTab({ scenario }) {
   const { loading, error, data } = useApi(() => api.experiments(), [scenario]);
 
   const rawModules = data?.answer?.modules;
-  const modules = Array.isArray(rawModules) && rawModules.length > 0
+  const isDemoFallback = !Array.isArray(rawModules) || rawModules.length === 0;
+
+  const modules = !isDemoFallback
     ? rawModules.map((m) => {
         // Enrich crafting naive fallback if null
         if (m.module?.toLowerCase().includes("craft") && (m.naive === null || m.naive === undefined)) {
@@ -66,15 +69,32 @@ export default function SummaryTab({ scenario }) {
 
   const randomMaps = data?.answer?.random_maps ?? null;
 
-  // Extract key metrics
+  // Dynamically extract values from modules and scenario
   const routeMod = modules.find((m) => m.module?.toLowerCase().includes("route"));
   const assignMod = modules.find((m) => m.module?.toLowerCase().includes("assign"));
   const craftMod = modules.find((m) => m.module?.toLowerCase().includes("craft"));
   const pipeMod = modules.find((m) => m.module?.toLowerCase().includes("pipeline"));
 
-  const totalScore = pipeMod?.optimized ?? 562;
+  const totalRaidTime = scenario?.total_time ?? 120;
+  const requiredSlots = scenario?.limits?.slots ?? 14;
+
+  const routeOpt = routeMod?.optimized ?? 70;
+  const routeNaive = routeMod?.naive ?? 80;
+  const routeGain = routeMod?.gain_pct ?? 12.5;
+
   const combatScore = assignMod?.optimized ?? 445;
+  const assignNaive = assignMod?.naive ?? 414;
+  const assignGain = assignMod?.gain_pct ?? 7.49;
+
   const craftScore = craftMod?.optimized ?? 117;
+  const craftNaive = craftMod?.naive ?? 111;
+  const craftGain = craftMod?.gain_pct ?? 5.41;
+
+  const totalScore = pipeMod?.optimized ?? (combatScore + craftScore);
+  const isPipelineFeasible = pipeMod?.optimized !== null && pipeMod?.optimized !== undefined;
+
+  const optCraftTime = Math.max(0, totalRaidTime - routeOpt);
+  const naiveCraftTime = Math.max(0, totalRaidTime - routeNaive);
 
   return (
     <section className="panel summary-panel" aria-label="Summary">
@@ -85,27 +105,28 @@ export default function SummaryTab({ scenario }) {
           <p className="subtitle">
             Empirical validation of mathematical programming vs. heuristic baselines, cross-stage dependency analysis,
             and 20-map Monte Carlo simulation.
+            {isDemoFallback && <span className="demo-data-badge"> (Demo Data Mode)</span>}
           </p>
         </div>
 
         {/* View Switcher: Interactive Dashboard vs Report Export */}
         <div className="summary-view-toggle">
-          <div className="segmented" role="group" aria-label="Summary View Options">
+          <div className="segmented-tabs" role="group" aria-label="Summary View Options">
             <button
               type="button"
-              className={`segment-btn ${viewMode === "dashboard" ? "active" : ""}`}
+              className={`segment-tab ${viewMode === "dashboard" ? "active" : ""}`}
               onClick={() => setViewMode("dashboard")}
               aria-pressed={viewMode === "dashboard"}
             >
-              📊 Dashboard View
+              Dashboard View
             </button>
             <button
               type="button"
-              className={`segment-btn ${viewMode === "export" ? "active" : ""}`}
+              className={`segment-tab ${viewMode === "export" ? "active" : ""}`}
               onClick={() => setViewMode("export")}
               aria-pressed={viewMode === "export"}
             >
-              📄 Report Export
+              Report Export
             </button>
           </div>
         </div>
@@ -116,6 +137,7 @@ export default function SummaryTab({ scenario }) {
           <ReportExportView
             modules={modules}
             randomMaps={randomMaps}
+            scenario={scenario}
             onSwitchView={() => setViewMode("dashboard")}
           />
         ) : (
@@ -135,10 +157,10 @@ export default function SummaryTab({ scenario }) {
               <div className="stat-card">
                 <span className="stat-label">Route Duration</span>
                 <span className="stat-value text-ok">
-                  {routeMod?.optimized ?? 70} min
+                  {routeOpt} min
                 </span>
                 <span className="stat-sub">
-                  vs. {routeMod?.naive ?? 80}m Naive (<strong>12.5% faster</strong>)
+                  vs. {routeNaive}m Naive (<strong>{formatGainPct(routeGain, false)} faster</strong>)
                 </span>
               </div>
 
@@ -149,7 +171,7 @@ export default function SummaryTab({ scenario }) {
                   {combatScore}
                 </span>
                 <span className="stat-sub">
-                  vs. {assignMod?.naive ?? 414} Naive (<strong>+7.5% score</strong>)
+                  vs. {assignNaive} Naive (<strong>{formatGainPct(assignGain, true)} score</strong>)
                 </span>
               </div>
 
@@ -160,30 +182,31 @@ export default function SummaryTab({ scenario }) {
                   {craftScore}
                 </span>
                 <span className="stat-sub">
-                  vs. {craftMod?.naive ?? 111} Naive (<strong>+5.4% score</strong>)
+                  vs. {craftNaive} Naive (<strong>{formatGainPct(craftGain, true)} score</strong>)
                 </span>
               </div>
 
               {/* Pipeline Feasibility Card */}
               <div className="stat-card feasibility-card">
                 <span className="stat-label">Stage 4 Feasibility</span>
-                <span className="stat-value text-ok">FEASIBLE</span>
+                <span className={`stat-value ${isPipelineFeasible ? "text-ok" : "text-danger"}`}>
+                  {isPipelineFeasible ? "FEASIBLE" : "INFEASIBLE"}
+                </span>
                 <span className="stat-sub text-warn">
-                  Naive 80m tour → <strong>Infeasible</strong>
+                  Naive {routeNaive}m tour → <strong>Infeasible ({naiveCraftTime}m left)</strong>
                 </span>
               </div>
             </div>
 
             {/* 2. Cross-Stage Dependency Insight Alert */}
             <div className="alert alert-info summary-dependency-alert">
-              <span className="alert-icon">🔗</span>
               <div className="alert-content">
                 <div className="alert-title">Stage 2 Feeds Stage 4: Critical Pipeline Coupling</div>
                 <div>
-                  The 120-minute raid limit couples the traveling salesperson tour directly to the crafting budget.
-                  With the naive 80-minute route, only 40 minutes remain and the 14-slot crafting plan is{" "}
-                  <strong className="text-danger">infeasible</strong>. By finding the global 70-minute tour, Stage 2
-                  delivers 50 minutes to Stage 4, turning an unviable raid into an optimal{" "}
+                  The {totalRaidTime}-minute raid limit couples the traveling salesperson tour directly to the crafting budget.
+                  With the naive {routeNaive}-minute route, only {naiveCraftTime} minutes remain and the {requiredSlots}-slot crafting plan is{" "}
+                  <strong className="text-danger">infeasible</strong>. By finding the global {routeOpt}-minute tour, Stage 2
+                  delivers {optCraftTime} minutes to Stage 4, turning an unviable raid into an optimal{" "}
                   <strong className="text-accent">{totalScore}-point victory</strong>.
                 </div>
               </div>

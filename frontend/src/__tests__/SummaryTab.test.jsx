@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import SummaryTab from "../tabs/SummaryTab.jsx";
 import scenarioFixture from "@fixtures/scenario.json";
@@ -17,31 +17,36 @@ describe("SummaryTab Component (Part 10)", () => {
     render(<SummaryTab scenario={scenarioFixture} />);
 
     // 1. Headline total score card: 562 (445 combat + 117 crafting)
-    expect(await screen.findByText("562")).toBeInTheDocument();
+    const scoreElements = await screen.findAllByText("562");
+    expect(scoreElements.length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Total Raid Score/i)[0]).toBeInTheDocument();
     expect(screen.getAllByText(/445/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/117/i).length).toBeGreaterThan(0);
 
     // 2. Stage 2 Route: 80 -> 70, 12.5% gain
-    expect(screen.getByTestId("module-card-route")).toBeInTheDocument();
-    expect(screen.getByText(/12.5% Faster/i)).toBeInTheDocument();
-    expect(screen.getByText(/70 minutes/i)).toBeInTheDocument();
-    expect(screen.getByText(/80 minutes/i)).toBeInTheDocument();
+    const routeCard = screen.getByTestId("module-card-route");
+    expect(routeCard).toBeInTheDocument();
+    expect(within(routeCard).getAllByText(/12.5% Faster/i).length).toBeGreaterThan(0);
+    expect(within(routeCard).getByText(/70 minutes/i)).toBeInTheDocument();
+    expect(within(routeCard).getByText(/80 minutes/i)).toBeInTheDocument();
 
     // 3. Stage 3 Assignment: 414 -> 445, 7.5% gain
-    expect(screen.getByTestId("module-card-assignment")).toBeInTheDocument();
-    expect(screen.getByText(/\+7\.5% Score/i)).toBeInTheDocument();
-    expect(screen.getByText(/445 score/i)).toBeInTheDocument();
-    expect(screen.getByText(/414 score/i)).toBeInTheDocument();
+    const assignCard = screen.getByTestId("module-card-assignment");
+    expect(assignCard).toBeInTheDocument();
+    expect(within(assignCard).getAllByText(/\+7\.5% Score/i).length).toBeGreaterThan(0);
+    expect(within(assignCard).getByText(/445 score/i)).toBeInTheDocument();
+    expect(within(assignCard).getByText(/414 score/i)).toBeInTheDocument();
 
     // 4. Stage 4 Crafting: 111 -> 117
-    expect(screen.getByTestId("module-card-crafting")).toBeInTheDocument();
-    expect(screen.getByText(/117 score/i)).toBeInTheDocument();
+    const craftCard = screen.getByTestId("module-card-crafting");
+    expect(craftCard).toBeInTheDocument();
+    expect(within(craftCard).getByText(/117 score/i)).toBeInTheDocument();
 
     // 5. Whole Pipeline: shows naive as Infeasible and total as 562
-    expect(screen.getByTestId("module-card-whole-pipeline")).toBeInTheDocument();
-    expect(screen.getByText(/Enables Feasibility/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Infeasible/i).length).toBeGreaterThan(0);
+    const pipeCard = screen.getByTestId("module-card-whole-pipeline");
+    expect(pipeCard).toBeInTheDocument();
+    expect(within(pipeCard).getByText(/Enables Feasibility/i)).toBeInTheDocument();
+    expect(within(pipeCard).getAllByText(/Infeasible/i).length).toBeGreaterThan(0);
 
     // 6. 20-Map Monte Carlo simulation section
     expect(screen.getByTestId("benchmark-section")).toBeInTheDocument();

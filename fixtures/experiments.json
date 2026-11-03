@@ -41,7 +41,7 @@
       "n": 20,
       "avg_route_gain_pct": 6.5566,
       "avg_assign_gain_pct": 5.7217,
-      "avg_solver_ms": 1.45,
+      "avg_solver_ms": 56.478,
       "maps": [
         {
           "seed": 1654615998,
@@ -52,7 +52,7 @@
           "greedy_assign": 401,
           "opt_assign": 408,
           "assign_gain_pct": 1.7456,
-          "solver_ms": 59.06
+          "solver_ms": 55.809
         },
         {
           "seed": 173879092,
@@ -63,7 +63,7 @@
           "greedy_assign": 350,
           "opt_assign": 392,
           "assign_gain_pct": 12.0,
-          "solver_ms": 2.45
+          "solver_ms": 2.414
         },
         {
           "seed": 2087043557,
@@ -74,7 +74,7 @@
           "greedy_assign": 430,
           "opt_assign": 430,
           "assign_gain_pct": 0.0,
-          "solver_ms": 6.24
+          "solver_ms": 6.088
         },
         {
           "seed": 1302718217,
@@ -85,7 +85,7 @@
           "greedy_assign": 382,
           "opt_assign": 382,
           "assign_gain_pct": 0.0,
-          "solver_ms": 29.97
+          "solver_ms": 30.25
         },
         {
           "seed": 1537810351,
@@ -96,7 +96,7 @@
           "greedy_assign": 370,
           "opt_assign": 408,
           "assign_gain_pct": 10.2703,
-          "solver_ms": 3.88
+          "solver_ms": 4.477
         },
         {
           "seed": 938204377,
@@ -107,7 +107,7 @@
           "greedy_assign": 363,
           "opt_assign": 449,
           "assign_gain_pct": 23.6915,
-          "solver_ms": 157.66
+          "solver_ms": 156.743
         },
         {
           "seed": 598176026,
@@ -118,7 +118,7 @@
           "greedy_assign": 422,
           "opt_assign": 422,
           "assign_gain_pct": 0.0,
-          "solver_ms": 14.8
+          "solver_ms": 14.757
         },
         {
           "seed": 600203567,
@@ -129,7 +129,7 @@
           "greedy_assign": 425,
           "opt_assign": 432,
           "assign_gain_pct": 1.6471,
-          "solver_ms": 1.94
+          "solver_ms": 2.045
         },
         {
           "seed": 1075916535,
@@ -140,7 +140,7 @@
           "greedy_assign": 442,
           "opt_assign": 445,
           "assign_gain_pct": 0.6787,
-          "solver_ms": 7.11
+          "solver_ms": 7.052
         },
         {
           "seed": 631194409,
@@ -151,7 +151,7 @@
           "greedy_assign": 397,
           "opt_assign": 424,
           "assign_gain_pct": 6.801,
-          "solver_ms": 22.27
+          "solver_ms": 22.007
         },
         {
           "seed": 424185324,
@@ -162,7 +162,7 @@
           "greedy_assign": 438,
           "opt_assign": 438,
           "assign_gain_pct": 0.0,
-          "solver_ms": 17.81
+          "solver_ms": 17.239
         },
         {
           "seed": 316721330,
@@ -173,7 +173,7 @@
           "greedy_assign": 395,
           "opt_assign": 427,
           "assign_gain_pct": 8.1013,
-          "solver_ms": 5.24
+          "solver_ms": 5.143
         },
         {
           "seed": 1418186270,
@@ -184,7 +184,7 @@
           "greedy_assign": 365,
           "opt_assign": 409,
           "assign_gain_pct": 12.0548,
-          "solver_ms": 0.69
+          "solver_ms": 0.671
         },
         {
           "seed": 432508404,
@@ -195,7 +195,7 @@
           "greedy_assign": 424,
           "opt_assign": 464,
           "assign_gain_pct": 9.434,
-          "solver_ms": 1.07
+          "solver_ms": 1.076
         },
         {
           "seed": 1864753826,
@@ -206,7 +206,7 @@
           "greedy_assign": 365,
           "opt_assign": 402,
           "assign_gain_pct": 10.137,
-          "solver_ms": 5.91
+          "solver_ms": 5.48
         },
         {
           "seed": 878225224,
@@ -217,7 +217,7 @@
           "greedy_assign": 403,
           "opt_assign": 422,
           "assign_gain_pct": 4.7146,
-          "solver_ms": 0.74
+          "solver_ms": 0.718
         },
         {
           "seed": 2048741382,
@@ -228,7 +228,7 @@
           "greedy_assign": 430,
           "opt_assign": 430,
           "assign_gain_pct": 0.0,
-          "solver_ms": 2.1
+          "solver_ms": 1.961
         },
         {
           "seed": 1118805955,
@@ -239,7 +239,7 @@
           "greedy_assign": 457,
           "opt_assign": 457,
           "assign_gain_pct": 0.0,
-          "solver_ms": 0.57
+          "solver_ms": 0.637
         },
         {
           "seed": 60308648,
@@ -250,7 +250,7 @@
           "greedy_assign": 380,
           "opt_assign": 430,
           "assign_gain_pct": 13.1579,
-          "solver_ms": 4.19
+          "solver_ms": 3.943
         },
         {
           "seed": 1712934065,
@@ -261,7 +261,7 @@
           "greedy_assign": 425,
           "opt_assign": 425,
           "assign_gain_pct": 0.0,
-          "solver_ms": 797.2
+          "solver_ms": 791.049
         }
       ]
     }
