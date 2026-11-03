@@ -15,17 +15,17 @@
         "naive": 414,
         "optimized": 445,
         "unit": "score",
-        "gain_pct": 7.5,
+        "gain_pct": 7.49,
         "direction": "higher_is_better"
       },
       {
         "module": "Crafting",
-        "naive": null,
+        "naive": 111,
         "optimized": 117,
         "unit": "score",
-        "gain_pct": null,
+        "gain_pct": 5.41,
         "direction": "higher_is_better",
-        "naive_note": "Equal-split policy is computed by Part 10 (backend/solvers/baselines.py)"
+        "naive_note": "Equal-split heuristic at 50 min remaining after optimal tour"
       },
       {
         "module": "Whole pipeline",
@@ -34,11 +34,237 @@
         "unit": "score",
         "gain_pct": null,
         "direction": "higher_is_better",
-        "naive_note": "Naive route leaves 40 min of crafting: infeasible (see fixtures/pipeline_naive.json)"
+        "naive_note": "Naive route leaves 40 min of crafting: infeasible"
       }
     ],
-    "random_maps": null
+    "random_maps": {
+      "n": 20,
+      "avg_route_gain_pct": 6.5566,
+      "avg_assign_gain_pct": 5.7217,
+      "avg_solver_ms": 56.478,
+      "maps": [
+        {
+          "seed": 1654615998,
+          "n_nodes": 9,
+          "nn_cost": 72,
+          "opt_cost": 70,
+          "route_gain_pct": 2.7778,
+          "greedy_assign": 401,
+          "opt_assign": 408,
+          "assign_gain_pct": 1.7456,
+          "solver_ms": 55.809
+        },
+        {
+          "seed": 173879092,
+          "n_nodes": 9,
+          "nn_cost": 85,
+          "opt_cost": 72,
+          "route_gain_pct": 15.2941,
+          "greedy_assign": 350,
+          "opt_assign": 392,
+          "assign_gain_pct": 12.0,
+          "solver_ms": 2.414
+        },
+        {
+          "seed": 2087043557,
+          "n_nodes": 9,
+          "nn_cost": 79,
+          "opt_cost": 78,
+          "route_gain_pct": 1.2658,
+          "greedy_assign": 430,
+          "opt_assign": 430,
+          "assign_gain_pct": 0.0,
+          "solver_ms": 6.088
+        },
+        {
+          "seed": 1302718217,
+          "n_nodes": 9,
+          "nn_cost": 88,
+          "opt_cost": 76,
+          "route_gain_pct": 13.6364,
+          "greedy_assign": 382,
+          "opt_assign": 382,
+          "assign_gain_pct": 0.0,
+          "solver_ms": 30.25
+        },
+        {
+          "seed": 1537810351,
+          "n_nodes": 10,
+          "nn_cost": 101,
+          "opt_cost": 89,
+          "route_gain_pct": 11.8812,
+          "greedy_assign": 370,
+          "opt_assign": 408,
+          "assign_gain_pct": 10.2703,
+          "solver_ms": 4.477
+        },
+        {
+          "seed": 938204377,
+          "n_nodes": 10,
+          "nn_cost": 69,
+          "opt_cost": 68,
+          "route_gain_pct": 1.4493,
+          "greedy_assign": 363,
+          "opt_assign": 449,
+          "assign_gain_pct": 23.6915,
+          "solver_ms": 156.743
+        },
+        {
+          "seed": 598176026,
+          "n_nodes": 9,
+          "nn_cost": 82,
+          "opt_cost": 80,
+          "route_gain_pct": 2.439,
+          "greedy_assign": 422,
+          "opt_assign": 422,
+          "assign_gain_pct": 0.0,
+          "solver_ms": 14.757
+        },
+        {
+          "seed": 600203567,
+          "n_nodes": 8,
+          "nn_cost": 86,
+          "opt_cost": 86,
+          "route_gain_pct": 0.0,
+          "greedy_assign": 425,
+          "opt_assign": 432,
+          "assign_gain_pct": 1.6471,
+          "solver_ms": 2.045
+        },
+        {
+          "seed": 1075916535,
+          "n_nodes": 10,
+          "nn_cost": 97,
+          "opt_cost": 97,
+          "route_gain_pct": 0.0,
+          "greedy_assign": 442,
+          "opt_assign": 445,
+          "assign_gain_pct": 0.6787,
+          "solver_ms": 7.052
+        },
+        {
+          "seed": 631194409,
+          "n_nodes": 9,
+          "nn_cost": 79,
+          "opt_cost": 75,
+          "route_gain_pct": 5.0633,
+          "greedy_assign": 397,
+          "opt_assign": 424,
+          "assign_gain_pct": 6.801,
+          "solver_ms": 22.007
+        },
+        {
+          "seed": 424185324,
+          "n_nodes": 10,
+          "nn_cost": 74,
+          "opt_cost": 69,
+          "route_gain_pct": 6.7568,
+          "greedy_assign": 438,
+          "opt_assign": 438,
+          "assign_gain_pct": 0.0,
+          "solver_ms": 17.239
+        },
+        {
+          "seed": 316721330,
+          "n_nodes": 10,
+          "nn_cost": 111,
+          "opt_cost": 107,
+          "route_gain_pct": 3.6036,
+          "greedy_assign": 395,
+          "opt_assign": 427,
+          "assign_gain_pct": 8.1013,
+          "solver_ms": 5.143
+        },
+        {
+          "seed": 1418186270,
+          "n_nodes": 9,
+          "nn_cost": 82,
+          "opt_cost": 76,
+          "route_gain_pct": 7.3171,
+          "greedy_assign": 365,
+          "opt_assign": 409,
+          "assign_gain_pct": 12.0548,
+          "solver_ms": 0.671
+        },
+        {
+          "seed": 432508404,
+          "n_nodes": 9,
+          "nn_cost": 90,
+          "opt_cost": 90,
+          "route_gain_pct": 0.0,
+          "greedy_assign": 424,
+          "opt_assign": 464,
+          "assign_gain_pct": 9.434,
+          "solver_ms": 1.076
+        },
+        {
+          "seed": 1864753826,
+          "n_nodes": 9,
+          "nn_cost": 87,
+          "opt_cost": 78,
+          "route_gain_pct": 10.3448,
+          "greedy_assign": 365,
+          "opt_assign": 402,
+          "assign_gain_pct": 10.137,
+          "solver_ms": 5.48
+        },
+        {
+          "seed": 878225224,
+          "n_nodes": 10,
+          "nn_cost": 72,
+          "opt_cost": 68,
+          "route_gain_pct": 5.5556,
+          "greedy_assign": 403,
+          "opt_assign": 422,
+          "assign_gain_pct": 4.7146,
+          "solver_ms": 0.718
+        },
+        {
+          "seed": 2048741382,
+          "n_nodes": 9,
+          "nn_cost": 84,
+          "opt_cost": 71,
+          "route_gain_pct": 15.4762,
+          "greedy_assign": 430,
+          "opt_assign": 430,
+          "assign_gain_pct": 0.0,
+          "solver_ms": 1.961
+        },
+        {
+          "seed": 1118805955,
+          "n_nodes": 8,
+          "nn_cost": 102,
+          "opt_cost": 96,
+          "route_gain_pct": 5.8824,
+          "greedy_assign": 457,
+          "opt_assign": 457,
+          "assign_gain_pct": 0.0,
+          "solver_ms": 0.637
+        },
+        {
+          "seed": 60308648,
+          "n_nodes": 8,
+          "nn_cost": 100,
+          "opt_cost": 88,
+          "route_gain_pct": 12.0,
+          "greedy_assign": 380,
+          "opt_assign": 430,
+          "assign_gain_pct": 13.1579,
+          "solver_ms": 3.943
+        },
+        {
+          "seed": 1712934065,
+          "n_nodes": 10,
+          "nn_cost": 77,
+          "opt_cost": 69,
+          "route_gain_pct": 10.3896,
+          "greedy_assign": 425,
+          "opt_assign": 425,
+          "assign_gain_pct": 0.0,
+          "solver_ms": 791.049
+        }
+      ]
+    }
   },
-  "steps": [],
-  "_fixture_note": "Shape is defined in docs/api-contract.md. naive crafting/pipeline and the 20-map summary are null until Part 10 computes them."
+  "steps": []
 }
