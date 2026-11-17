@@ -126,4 +126,29 @@ describe("SummaryTab Component (Part 10)", () => {
     expect(matches.length).toBeGreaterThan(0);
     expect(screen.getByText(/Monte Carlo experiment results are computed live by the backend/i)).toBeInTheDocument();
   });
+
+  it("disables View map in fixture mode with a 'needs live backend' tooltip", async () => {
+    vi.spyOn(api, "experiments").mockResolvedValue(experimentsFixture);
+    const spy = vi.spyOn(api, "benchmarkMap");
+    const onLoad = vi.fn();
+    render(<SummaryTab scenario={scenarioFixture} onLoadScenario={onLoad} />);
+
+    const buttons = await screen.findAllByRole("button", { name: /^View map #\d+/ });
+    expect(buttons).toHaveLength(20);
+    const first = screen.getByRole("button", { name: "View map #1 (seed 1654615998)" });
+    expect(first).toBeDisabled();
+    expect(first).toHaveAttribute("title", expect.stringMatching(/needs live backend/));
+    fireEvent.click(first);
+    expect(spy).not.toHaveBeenCalled();
+    expect(onLoad).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("repro-card")).toBeNull();
+  });
+
+  it("keeps the 1-20 row number when filtering by node count", async () => {
+    vi.spyOn(api, "experiments").mockResolvedValue(experimentsFixture);
+    render(<SummaryTab scenario={scenarioFixture} />);
+    fireEvent.click(await screen.findByRole("button", { name: "10 Nodes" }));
+    // Row 12 (seed 316721330) has 10 nodes and keeps its benchmark number under the filter
+    expect(screen.getByRole("button", { name: "View map #12 (seed 316721330)" })).toBeInTheDocument();
+  });
 });

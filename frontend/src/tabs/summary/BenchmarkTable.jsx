@@ -1,5 +1,47 @@
 import React, { useState } from "react";
+import { api, USE_FIXTURES, NEEDS_LIVE_BACKEND } from "../../api.js";
 import { formatGainPct, formatMs } from "./formatters.js";
+
+/** "View map" button for one row: rebuilds the map from its seed and hands the scenario to App. */
+function ViewMapButton({ row, index, onLoadScenario, isActive }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const disabled = USE_FIXTURES || !onLoadScenario || loading;
+
+  const handleClick = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const scenario = await api.benchmarkMap(row.seed, row.n_nodes);
+      setLoading(false);
+      onLoadScenario(scenario);
+    } catch (err) {
+      setLoading(false);
+      setError(err?.message || "Could not load this map.");
+    }
+  };
+
+  return (
+    <div className="view-map-cell">
+      <button
+        type="button"
+        className={`btn btn-xs ${isActive ? "btn-primary" : "btn-secondary"}`}
+        onClick={handleClick}
+        disabled={disabled}
+        aria-busy={loading}
+        aria-label={`View map #${index} (seed ${row.seed})`}
+        title={USE_FIXTURES ? NEEDS_LIVE_BACKEND : `Load map #${index} into every tab`}
+      >
+        {loading ? "Loading…" : isActive ? "Viewing" : "View map"}
+      </button>
+      {error && (
+        <span className="view-map-error text-danger" role="alert">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
 
 /**
  * BenchmarkTable
@@ -9,7 +51,7 @@ import { formatGainPct, formatMs } from "./formatters.js";
  * - Average solver time (ms)
  * - Individual row data for 20 seeded random maps (8 to 10 nodes)
  */
-export default function BenchmarkTable({ randomMaps }) {
+export default function BenchmarkTable({ randomMaps, onLoadScenario, activeSeed = null }) {
   const [filterNodes, setFilterNodes] = useState("all");
 
   if (!randomMaps || !randomMaps.maps || randomMaps.maps.length === 0) {
@@ -133,12 +175,15 @@ export default function BenchmarkTable({ randomMaps }) {
               <th scope="col" className="text-right">Opt Combat</th>
               <th scope="col" className="text-right">Combat Gain</th>
               <th scope="col" className="text-right">Time (ms)</th>
+              <th scope="col" className="text-center">Map</th>
             </tr>
           </thead>
           <tbody>
-            {filteredMaps.map((row, idx) => (
+            {filteredMaps.map((row, idx) => {
+              const benchIndex = maps.indexOf(row) + 1; // stable 1-20 position, also under a node filter
+              return (
               <tr key={row.seed ?? idx}>
-                <td className="text-center text-muted font-mono">{idx + 1}</td>
+                <td className="text-center text-muted font-mono">{benchIndex}</td>
                 <td className="font-mono text-muted">{row.seed}</td>
                 <td className="text-center font-mono">{row.n_nodes}</td>
                 <td className="text-right font-mono">{row.nn_cost}m</td>
@@ -154,8 +199,17 @@ export default function BenchmarkTable({ randomMaps }) {
                 <td className="text-right font-mono text-muted">
                   {Number(row.solver_ms).toFixed(1)}
                 </td>
+                <td className="text-center">
+                  <ViewMapButton
+                    row={row}
+                    index={benchIndex}
+                    onLoadScenario={onLoadScenario}
+                    isActive={activeSeed === row.seed}
+                  />
+                </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="summary-table-averages">
@@ -177,6 +231,7 @@ export default function BenchmarkTable({ randomMaps }) {
               <td className="text-right text-bold font-mono">
                 {formatMs(avg_solver_ms)}
               </td>
+              <td />
             </tr>
           </tfoot>
         </table>

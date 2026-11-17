@@ -1,0 +1,1887 @@
+{
+ "row1": {
+  "scenario": {
+   "total_time": 120,
+   "nodes": {
+    "Base": [
+     6.262667531866006,
+     18.351346479817096
+    ],
+    "N1": [
+     15.281466537433987,
+     29.422150535923617
+    ],
+    "N2": [
+     14.03277419099748,
+     4.576149727614406
+    ],
+    "N3": [
+     13.497292849099455,
+     24.237751077822868
+    ],
+    "N4": [
+     18.576807272657085,
+     15.788292225634788
+    ],
+    "N5": [
+     14.53240175602794,
+     0.4659623252529499
+    ],
+    "N6": [
+     17.623001277124626,
+     0.4484703921788824
+    ],
+    "N7": [
+     5.749712180600326,
+     18.933142441592874
+    ],
+    "N8": [
+     7.172935375419919,
+     6.304439133132979
+    ]
+   },
+   "loot": {},
+   "weapon_boss_scores": [
+    [
+     56,
+     61,
+     73,
+     95,
+     63
+    ],
+    [
+     89,
+     49,
+     70,
+     87,
+     31
+    ],
+    [
+     97,
+     92,
+     31,
+     49,
+     38
+    ],
+    [
+     31,
+     54,
+     82,
+     60,
+     56
+    ],
+    [
+     58,
+     79,
+     66,
+     45,
+     43
+    ]
+   ],
+   "recipes": {
+    "score": [
+     8,
+     6,
+     10,
+     7
+    ],
+    "time": [
+     3,
+     4,
+     5,
+     3
+    ],
+    "weight": [
+     3,
+     2,
+     4,
+     1
+    ],
+    "stamina": [
+     4,
+     1,
+     5,
+     3
+    ],
+    "survival": [
+     5,
+     2,
+     0,
+     3
+    ]
+   },
+   "limits": {
+    "weight": 40,
+    "stamina": 90,
+    "survival_min": 30,
+    "slots": 14
+   },
+   "benchmark": {
+    "seed": 1654615998,
+    "n_nodes": 9,
+    "index": 1,
+    "expected": {
+     "nn_cost": 72,
+     "opt_cost": 70,
+     "greedy_assign": 401,
+     "opt_assign": 408
+    },
+    "recomputed": {
+     "nn_cost": 72,
+     "opt_cost": 70,
+     "greedy_assign": 401,
+     "opt_assign": 408
+    }
+   }
+  },
+  "route": {
+   "status": "optimal",
+   "answer": {
+    "tour": [
+     "Base",
+     "N8",
+     "N5",
+     "N6",
+     "N2",
+     "N4",
+     "N1",
+     "N3",
+     "N7",
+     "Base"
+    ],
+    "cost": 70,
+    "relaxation_cost": 51,
+    "first_subtours": [
+     [
+      "Base",
+      "N7"
+     ],
+     [
+      "N1",
+      "N4",
+      "N3"
+     ],
+     [
+      "N2",
+      "N8"
+     ],
+     [
+      "N5",
+      "N6"
+     ]
+    ],
+    "nearest_neighbour": {
+     "tour": [
+      "Base",
+      "N7",
+      "N3",
+      "N1",
+      "N4",
+      "N2",
+      "N5",
+      "N6",
+      "N8",
+      "Base"
+     ],
+     "cost": 72
+    }
+   },
+   "steps": [
+    {
+     "node": 1,
+     "parent": null,
+     "forbidden_arcs": [],
+     "branched_arc": null,
+     "assignment": [
+      [
+       "Base",
+       "N7"
+      ],
+      [
+       "N1",
+       "N4"
+      ],
+      [
+       "N2",
+       "N8"
+      ],
+      [
+       "N3",
+       "N1"
+      ],
+      [
+       "N4",
+       "N3"
+      ],
+      [
+       "N5",
+       "N6"
+      ],
+      [
+       "N6",
+       "N5"
+      ],
+      [
+       "N7",
+       "Base"
+      ],
+      [
+       "N8",
+       "N2"
+      ]
+     ],
+     "cost": 51,
+     "subtours": [
+      [
+       "Base",
+       "N7"
+      ],
+      [
+       "N1",
+       "N4",
+       "N3"
+      ],
+      [
+       "N2",
+       "N8"
+      ],
+      [
+       "N5",
+       "N6"
+      ]
+     ],
+     "status": "branch",
+     "incumbent": null
+    },
+    {
+     "node": 2,
+     "parent": 1,
+     "forbidden_arcs": [
+      [
+       "Base",
+       "N7"
+      ]
+     ],
+     "branched_arc": [
+      "Base",
+      "N7"
+     ],
+     "assignment": [
+      [
+       "Base",
+       "N4"
+      ],
+      [
+       "N1",
+       "N3"
+      ],
+      [
+       "N2",
+       "N8"
+      ],
+      [
+       "N3",
+       "N1"
+      ],
+      [
+       "N4",
+       "N7"
+      ],
+      [
+       "N5",
+       "N6"
+      ],
+      [
+       "N6",
+       "N5"
+      ],
+      [
+       "N7",
+       "Base"
+      ],
+      [
+       "N8",
+       "N2"
+      ]
+     ],
+     "cost": 57,
+     "subtours": [
+      [
+       "Base",
+       "N4",
+       "N7"
+      ],
+      [
+       "N1",
+       "N3"
+      ],
+      [
+       "N2",
+       "N8"
+      ],
+      [
+       "N5",
+       "N6"
+      ]
+     ],
+     "status": "branch",
+     "incumbent": null
+    },
+    {
+     "node": 3,
+     "parent": 2,
+     "forbidden_arcs": [
+      [
+       "Base",
+       "N7"
+      ],
+      [
+       "N1",
+       "N3"
+      ]
+     ],
+     "branched_arc": [
+      "N1",
+      "N3"
+     ],
+     "assignment": [
+      [
+       "Base",
+       "N3"
+      ],
+      [
+       "N1",
+       "N4"
+      ],
+      [
+       "N2",
+       "N8"
+      ],
+      [
+       "N3",
+       "N1"
+      ],
+      [
+       "N4",
+       "N7"
+      ],
+      [
+       "N5",
+       "N6"
+      ],
+      [
+       "N6",
+       "N5"
+      ],
+      [
+       "N7",
+       "Base"
+      ],
+      [
+       "N8",
+       "N2"
+      ]
+     ],
+     "cost": 62,
+     "subtours": [
+      [
+       "Base",
+       "N3",
+       "N1",
+       "N4",
+       "N7"
+      ],
+      [
+       "N2",
+       "N8"
+      ],
+      [
+       "N5",
+       "N6"
+      ]
+     ],
+     "status": "branch",
+     "incumbent": null
+    },
+    {
+     "node": 4,
+     "parent": 3,
+     "forbidden_arcs": [
+      [
+       "Base",
+       "N7"
+      ],
+      [
+       "N1",
+       "N3"
+      ],
+      [
+       "N2",
+       "N8"
+      ]
+     ],
+     "branched_arc": [
+      "N2",
+      "N8"
+     ],
+     "assignment": [
+      [
+       "Base",
+       "N3"
+      ],
+      [
+       "N1",
+       "N4"
+      ],
+      [
+       "N2",
+       "N6"
+      ],
+      [
+       "N3",
+       "N1"
+      ],
+      [
+       "N4",
+       "N7"
+      ],
+      [
+       "N5",
+       "N8"
+      ],
+      [
+       "N6",
+       "N5"
+      ],
+      [
+       "N7",
+       "Base"
+      ],
+      [
+       "N8",
+       "N2"
+      ]
+     ],
+     "cost": 66,
+     "subtours": [
+      [
+       "Base",
+       "N3",
+       "N1",
+       "N4",
+       "N7"
+      ],
+      [
+       "N2",
+       "N6",
+       "N5",
+       "N8"
+      ]
+     ],
+     "status": "branch",
+     "incumbent": null
+    },
+    {
+     "node": 5,
+     "parent": 4,
+     "forbidden_arcs": [
+      [
+       "Base",
+       "N7"
+      ],
+      [
+       "N1",
+       "N3"
+      ],
+      [
+       "N2",
+       "N6"
+      ],
+      [
+       "N2",
+       "N8"
+      ]
+     ],
+     "branched_arc": [
+      "N2",
+      "N6"
+     ],
+     "assignment": [
+      [
+       "Base",
+       "N8"
+      ],
+      [
+       "N1",
+       "N4"
+      ],
+      [
+       "N2",
+       "N5"
+      ],
+      [
+       "N3",
+       "N1"
+      ],
+      [
+       "N4",
+       "N3"
+      ],
+      [
+       "N5",
+       "N6"
+      ],
+      [
+       "N6",
+       "N2"
+      ],
+      [
+       "N7",
+       "Base"
+      ],
+      [
+       "N8",
+       "N7"
+      ]
+     ],
+     "cost": 67,
+     "subtours": [
+      [
+       "Base",
+       "N8",
+       "N7"
+      ],
+      [
+       "N1",
+       "N4",
+       "N3"
+      ],
+      [
+       "N2",
+       "N5",
+       "N6"
+      ]
+     ],
+     "status": "branch",
+     "incumbent": null
+    }
+   ]
+  },
+  "hull": {
+   "status": "optimal",
+   "answer": {
+    "vertices": [
+     "N6",
+     "N4",
+     "N1",
+     "N7",
+     "N8",
+     "N5"
+    ],
+    "interior": [
+     "Base",
+     "N2",
+     "N3"
+    ]
+   },
+   "steps": [
+    {
+     "action": "push",
+     "point": "N4",
+     "stack": [
+      "N6",
+      "N4"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N1",
+     "stack": [
+      "N6",
+      "N4",
+      "N1"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N3",
+     "stack": [
+      "N6",
+      "N4",
+      "N1",
+      "N3"
+     ]
+    },
+    {
+     "action": "pop",
+     "point": "N3",
+     "stack": [
+      "N6",
+      "N4",
+      "N1"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "Base",
+     "stack": [
+      "N6",
+      "N4",
+      "N1",
+      "Base"
+     ]
+    },
+    {
+     "action": "pop",
+     "point": "Base",
+     "stack": [
+      "N6",
+      "N4",
+      "N1"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N7",
+     "stack": [
+      "N6",
+      "N4",
+      "N1",
+      "N7"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N2",
+     "stack": [
+      "N6",
+      "N4",
+      "N1",
+      "N7",
+      "N2"
+     ]
+    },
+    {
+     "action": "pop",
+     "point": "N2",
+     "stack": [
+      "N6",
+      "N4",
+      "N1",
+      "N7"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N8",
+     "stack": [
+      "N6",
+      "N4",
+      "N1",
+      "N7",
+      "N8"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N5",
+     "stack": [
+      "N6",
+      "N4",
+      "N1",
+      "N7",
+      "N8",
+      "N5"
+     ]
+    }
+   ]
+  },
+  "assign": {
+   "status": "optimal",
+   "answer": {
+    "pairs": [
+     [
+      1,
+      5
+     ],
+     [
+      2,
+      4
+     ],
+     [
+      3,
+      1
+     ],
+     [
+      4,
+      3
+     ],
+     [
+      5,
+      2
+     ]
+    ],
+    "total": 408,
+    "unassigned": {
+     "rows": [],
+     "cols": []
+    }
+   },
+   "steps": [
+    {
+     "phase": "convert",
+     "matrix": [
+      [
+       41,
+       36,
+       24,
+       2,
+       34
+      ],
+      [
+       8,
+       48,
+       27,
+       10,
+       66
+      ],
+      [
+       0,
+       5,
+       66,
+       48,
+       59
+      ],
+      [
+       66,
+       43,
+       15,
+       37,
+       41
+      ],
+      [
+       39,
+       18,
+       31,
+       52,
+       54
+      ]
+     ],
+     "covered_rows": [],
+     "covered_cols": [],
+     "dummy_rows": [],
+     "dummy_cols": [],
+     "note": "c_ij = P_max - p_ij with P_max = 97"
+    },
+    {
+     "phase": "row_reduce",
+     "matrix": [
+      [
+       39,
+       34,
+       22,
+       0,
+       32
+      ],
+      [
+       0,
+       40,
+       19,
+       2,
+       58
+      ],
+      [
+       0,
+       5,
+       66,
+       48,
+       59
+      ],
+      [
+       51,
+       28,
+       0,
+       22,
+       26
+      ],
+      [
+       21,
+       0,
+       13,
+       34,
+       36
+      ]
+     ],
+     "covered_rows": [],
+     "covered_cols": [],
+     "dummy_rows": [],
+     "dummy_cols": [],
+     "note": "Subtract the minimum of each row from every value in that row."
+    },
+    {
+     "phase": "col_reduce",
+     "matrix": [
+      [
+       39,
+       34,
+       22,
+       0,
+       6
+      ],
+      [
+       0,
+       40,
+       19,
+       2,
+       32
+      ],
+      [
+       0,
+       5,
+       66,
+       48,
+       33
+      ],
+      [
+       51,
+       28,
+       0,
+       22,
+       0
+      ],
+      [
+       21,
+       0,
+       13,
+       34,
+       10
+      ]
+     ],
+     "covered_rows": [],
+     "covered_cols": [],
+     "dummy_rows": [],
+     "dummy_cols": [],
+     "note": "Subtract the minimum of each column from every value in that column."
+    }
+   ]
+  },
+  "pipeline": {
+   "status": "optimal",
+   "answer": {
+    "tour_time": 70,
+    "craft_time": 50,
+    "combat": 408,
+    "crafting": 117,
+    "total": 525,
+    "route_policy": "optimal",
+    "tour": [
+     "Base",
+     "N8",
+     "N5",
+     "N6",
+     "N2",
+     "N4",
+     "N1",
+     "N3",
+     "N7",
+     "Base"
+    ]
+   },
+   "steps": []
+  },
+  "pipeline_nn": {
+   "status": "optimal",
+   "answer": {
+    "tour_time": 72,
+    "craft_time": 48,
+    "combat": 408,
+    "crafting": 115.5,
+    "total": 523.5,
+    "route_policy": "nearest_neighbour",
+    "tour": [
+     "Base",
+     "N7",
+     "N3",
+     "N1",
+     "N4",
+     "N2",
+     "N5",
+     "N6",
+     "N8",
+     "Base"
+    ]
+   },
+   "steps": []
+  }
+ },
+ "row12": {
+  "scenario": {
+   "total_time": 120,
+   "nodes": {
+    "Base": [
+     18.236676583118985,
+     11.3512996359511
+    ],
+    "N1": [
+     15.854421456284797,
+     28.940051320171754
+    ],
+    "N2": [
+     24.64266604734674,
+     6.657783074003757
+    ],
+    "N3": [
+     14.149006434923791,
+     7.86994763790076
+    ],
+    "N4": [
+     19.45939040878014,
+     2.606909456483372
+    ],
+    "N5": [
+     0.3325665692802049,
+     5.595995206204992
+    ],
+    "N6": [
+     28.99344700065683,
+     11.941296157009626
+    ],
+    "N7": [
+     1.3361689670409183,
+     29.812193709123225
+    ],
+    "N8": [
+     17.734623274424212,
+     0.9577007195609899
+    ],
+    "N9": [
+     4.545757889182108,
+     2.4225798755349395
+    ]
+   },
+   "loot": {},
+   "weapon_boss_scores": [
+    [
+     78,
+     97,
+     58,
+     62,
+     90
+    ],
+    [
+     60,
+     63,
+     41,
+     91,
+     31
+    ],
+    [
+     53,
+     44,
+     80,
+     35,
+     84
+    ],
+    [
+     34,
+     92,
+     49,
+     97,
+     40
+    ],
+    [
+     74,
+     53,
+     81,
+     69,
+     52
+    ]
+   ],
+   "recipes": {
+    "score": [
+     8,
+     6,
+     10,
+     7
+    ],
+    "time": [
+     3,
+     4,
+     5,
+     3
+    ],
+    "weight": [
+     3,
+     2,
+     4,
+     1
+    ],
+    "stamina": [
+     4,
+     1,
+     5,
+     3
+    ],
+    "survival": [
+     5,
+     2,
+     0,
+     3
+    ]
+   },
+   "limits": {
+    "weight": 40,
+    "stamina": 90,
+    "survival_min": 30,
+    "slots": 14
+   },
+   "benchmark": {
+    "seed": 316721330,
+    "n_nodes": 10,
+    "index": 12,
+    "expected": {
+     "nn_cost": 111,
+     "opt_cost": 107,
+     "greedy_assign": 395,
+     "opt_assign": 427
+    },
+    "recomputed": {
+     "nn_cost": 111,
+     "opt_cost": 107,
+     "greedy_assign": 395,
+     "opt_assign": 427
+    }
+   }
+  },
+  "route": {
+   "status": "optimal",
+   "answer": {
+    "tour": [
+     "Base",
+     "N2",
+     "N6",
+     "N1",
+     "N7",
+     "N5",
+     "N9",
+     "N8",
+     "N4",
+     "N3",
+     "Base"
+    ],
+    "cost": 107,
+    "relaxation_cost": 68,
+    "first_subtours": [
+     [
+      "Base",
+      "N3"
+     ],
+     [
+      "N1",
+      "N7"
+     ],
+     [
+      "N2",
+      "N6"
+     ],
+     [
+      "N4",
+      "N8"
+     ],
+     [
+      "N5",
+      "N9"
+     ]
+    ],
+    "nearest_neighbour": {
+     "tour": [
+      "Base",
+      "N3",
+      "N4",
+      "N8",
+      "N2",
+      "N6",
+      "N1",
+      "N7",
+      "N5",
+      "N9",
+      "Base"
+     ],
+     "cost": 111
+    }
+   },
+   "steps": [
+    {
+     "node": 1,
+     "parent": null,
+     "forbidden_arcs": [],
+     "branched_arc": null,
+     "assignment": [
+      [
+       "Base",
+       "N3"
+      ],
+      [
+       "N1",
+       "N7"
+      ],
+      [
+       "N2",
+       "N6"
+      ],
+      [
+       "N3",
+       "Base"
+      ],
+      [
+       "N4",
+       "N8"
+      ],
+      [
+       "N5",
+       "N9"
+      ],
+      [
+       "N6",
+       "N2"
+      ],
+      [
+       "N7",
+       "N1"
+      ],
+      [
+       "N8",
+       "N4"
+      ],
+      [
+       "N9",
+       "N5"
+      ]
+     ],
+     "cost": 68,
+     "subtours": [
+      [
+       "Base",
+       "N3"
+      ],
+      [
+       "N1",
+       "N7"
+      ],
+      [
+       "N2",
+       "N6"
+      ],
+      [
+       "N4",
+       "N8"
+      ],
+      [
+       "N5",
+       "N9"
+      ]
+     ],
+     "status": "branch",
+     "incumbent": null
+    },
+    {
+     "node": 2,
+     "parent": 1,
+     "forbidden_arcs": [
+      [
+       "Base",
+       "N3"
+      ]
+     ],
+     "branched_arc": [
+      "Base",
+      "N3"
+     ],
+     "assignment": [
+      [
+       "Base",
+       "N4"
+      ],
+      [
+       "N1",
+       "N7"
+      ],
+      [
+       "N2",
+       "N6"
+      ],
+      [
+       "N3",
+       "Base"
+      ],
+      [
+       "N4",
+       "N8"
+      ],
+      [
+       "N5",
+       "N9"
+      ],
+      [
+       "N6",
+       "N2"
+      ],
+      [
+       "N7",
+       "N1"
+      ],
+      [
+       "N8",
+       "N3"
+      ],
+      [
+       "N9",
+       "N5"
+      ]
+     ],
+     "cost": 78,
+     "subtours": [
+      [
+       "Base",
+       "N4",
+       "N8",
+       "N3"
+      ],
+      [
+       "N1",
+       "N7"
+      ],
+      [
+       "N2",
+       "N6"
+      ],
+      [
+       "N5",
+       "N9"
+      ]
+     ],
+     "status": "branch",
+     "incumbent": null
+    },
+    {
+     "node": 3,
+     "parent": 2,
+     "forbidden_arcs": [
+      [
+       "Base",
+       "N3"
+      ],
+      [
+       "N1",
+       "N7"
+      ]
+     ],
+     "branched_arc": [
+      "N1",
+      "N7"
+     ],
+     "assignment": [
+      [
+       "Base",
+       "N7"
+      ],
+      [
+       "N1",
+       "N3"
+      ],
+      [
+       "N2",
+       "N6"
+      ],
+      [
+       "N3",
+       "Base"
+      ],
+      [
+       "N4",
+       "N8"
+      ],
+      [
+       "N5",
+       "N9"
+      ],
+      [
+       "N6",
+       "N2"
+      ],
+      [
+       "N7",
+       "N1"
+      ],
+      [
+       "N8",
+       "N4"
+      ],
+      [
+       "N9",
+       "N5"
+      ]
+     ],
+     "cost": 94,
+     "subtours": [
+      [
+       "Base",
+       "N7",
+       "N1",
+       "N3"
+      ],
+      [
+       "N2",
+       "N6"
+      ],
+      [
+       "N4",
+       "N8"
+      ],
+      [
+       "N5",
+       "N9"
+      ]
+     ],
+     "status": "branch",
+     "incumbent": null
+    },
+    {
+     "node": 4,
+     "parent": 3,
+     "forbidden_arcs": [
+      [
+       "Base",
+       "N3"
+      ],
+      [
+       "N1",
+       "N7"
+      ],
+      [
+       "N2",
+       "N6"
+      ]
+     ],
+     "branched_arc": [
+      "N2",
+      "N6"
+     ],
+     "assignment": [
+      [
+       "Base",
+       "N7"
+      ],
+      [
+       "N1",
+       "N6"
+      ],
+      [
+       "N2",
+       "N3"
+      ],
+      [
+       "N3",
+       "Base"
+      ],
+      [
+       "N4",
+       "N8"
+      ],
+      [
+       "N5",
+       "N9"
+      ],
+      [
+       "N6",
+       "N2"
+      ],
+      [
+       "N7",
+       "N1"
+      ],
+      [
+       "N8",
+       "N4"
+      ],
+      [
+       "N9",
+       "N5"
+      ]
+     ],
+     "cost": 98,
+     "subtours": [
+      [
+       "Base",
+       "N7",
+       "N1",
+       "N6",
+       "N2",
+       "N3"
+      ],
+      [
+       "N4",
+       "N8"
+      ],
+      [
+       "N5",
+       "N9"
+      ]
+     ],
+     "status": "branch",
+     "incumbent": null
+    },
+    {
+     "node": 5,
+     "parent": 4,
+     "forbidden_arcs": [
+      [
+       "Base",
+       "N3"
+      ],
+      [
+       "N1",
+       "N7"
+      ],
+      [
+       "N2",
+       "N6"
+      ],
+      [
+       "N4",
+       "N8"
+      ]
+     ],
+     "branched_arc": [
+      "N4",
+      "N8"
+     ],
+     "assignment": [
+      [
+       "Base",
+       "N7"
+      ],
+      [
+       "N1",
+       "N6"
+      ],
+      [
+       "N2",
+       "N8"
+      ],
+      [
+       "N3",
+       "Base"
+      ],
+      [
+       "N4",
+       "N3"
+      ],
+      [
+       "N5",
+       "N9"
+      ],
+      [
+       "N6",
+       "N2"
+      ],
+      [
+       "N7",
+       "N1"
+      ],
+      [
+       "N8",
+       "N4"
+      ],
+      [
+       "N9",
+       "N5"
+      ]
+     ],
+     "cost": 101,
+     "subtours": [
+      [
+       "Base",
+       "N7",
+       "N1",
+       "N6",
+       "N2",
+       "N8",
+       "N4",
+       "N3"
+      ],
+      [
+       "N5",
+       "N9"
+      ]
+     ],
+     "status": "branch",
+     "incumbent": null
+    }
+   ]
+  },
+  "hull": {
+   "status": "optimal",
+   "answer": {
+    "vertices": [
+     "N8",
+     "N2",
+     "N6",
+     "N1",
+     "N7",
+     "N5",
+     "N9"
+    ],
+    "interior": [
+     "Base",
+     "N3",
+     "N4"
+    ]
+   },
+   "steps": [
+    {
+     "action": "push",
+     "point": "N2",
+     "stack": [
+      "N8",
+      "N2"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N4",
+     "stack": [
+      "N8",
+      "N2",
+      "N4"
+     ]
+    },
+    {
+     "action": "pop",
+     "point": "N4",
+     "stack": [
+      "N8",
+      "N2"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N6",
+     "stack": [
+      "N8",
+      "N2",
+      "N6"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "Base",
+     "stack": [
+      "N8",
+      "N2",
+      "N6",
+      "Base"
+     ]
+    },
+    {
+     "action": "pop",
+     "point": "Base",
+     "stack": [
+      "N8",
+      "N2",
+      "N6"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N1",
+     "stack": [
+      "N8",
+      "N2",
+      "N6",
+      "N1"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N3",
+     "stack": [
+      "N8",
+      "N2",
+      "N6",
+      "N1",
+      "N3"
+     ]
+    },
+    {
+     "action": "pop",
+     "point": "N3",
+     "stack": [
+      "N8",
+      "N2",
+      "N6",
+      "N1"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N7",
+     "stack": [
+      "N8",
+      "N2",
+      "N6",
+      "N1",
+      "N7"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N5",
+     "stack": [
+      "N8",
+      "N2",
+      "N6",
+      "N1",
+      "N7",
+      "N5"
+     ]
+    },
+    {
+     "action": "push",
+     "point": "N9",
+     "stack": [
+      "N8",
+      "N2",
+      "N6",
+      "N1",
+      "N7",
+      "N5",
+      "N9"
+     ]
+    }
+   ]
+  },
+  "assign": {
+   "status": "optimal",
+   "answer": {
+    "pairs": [
+     [
+      1,
+      5
+     ],
+     [
+      2,
+      4
+     ],
+     [
+      3,
+      3
+     ],
+     [
+      4,
+      2
+     ],
+     [
+      5,
+      1
+     ]
+    ],
+    "total": 427,
+    "unassigned": {
+     "rows": [],
+     "cols": []
+    }
+   },
+   "steps": [
+    {
+     "phase": "convert",
+     "matrix": [
+      [
+       19,
+       0,
+       39,
+       35,
+       7
+      ],
+      [
+       37,
+       34,
+       56,
+       6,
+       66
+      ],
+      [
+       44,
+       53,
+       17,
+       62,
+       13
+      ],
+      [
+       63,
+       5,
+       48,
+       0,
+       57
+      ],
+      [
+       23,
+       44,
+       16,
+       28,
+       45
+      ]
+     ],
+     "covered_rows": [],
+     "covered_cols": [],
+     "dummy_rows": [],
+     "dummy_cols": [],
+     "note": "c_ij = P_max - p_ij with P_max = 97"
+    },
+    {
+     "phase": "row_reduce",
+     "matrix": [
+      [
+       19,
+       0,
+       39,
+       35,
+       7
+      ],
+      [
+       31,
+       28,
+       50,
+       0,
+       60
+      ],
+      [
+       31,
+       40,
+       4,
+       49,
+       0
+      ],
+      [
+       63,
+       5,
+       48,
+       0,
+       57
+      ],
+      [
+       7,
+       28,
+       0,
+       12,
+       29
+      ]
+     ],
+     "covered_rows": [],
+     "covered_cols": [],
+     "dummy_rows": [],
+     "dummy_cols": [],
+     "note": "Subtract the minimum of each row from every value in that row."
+    },
+    {
+     "phase": "col_reduce",
+     "matrix": [
+      [
+       12,
+       0,
+       39,
+       35,
+       7
+      ],
+      [
+       24,
+       28,
+       50,
+       0,
+       60
+      ],
+      [
+       24,
+       40,
+       4,
+       49,
+       0
+      ],
+      [
+       56,
+       5,
+       48,
+       0,
+       57
+      ],
+      [
+       0,
+       28,
+       0,
+       12,
+       29
+      ]
+     ],
+     "covered_rows": [],
+     "covered_cols": [],
+     "dummy_rows": [],
+     "dummy_cols": [],
+     "note": "Subtract the minimum of each column from every value in that column."
+    }
+   ]
+  },
+  "pipeline": {
+   "status": "infeasible",
+   "answer": {
+    "tour_time": 107,
+    "craft_time": 13,
+    "combat": 427,
+    "crafting": null,
+    "total": null,
+    "route_policy": "optimal",
+    "tour": [
+     "Base",
+     "N2",
+     "N6",
+     "N1",
+     "N7",
+     "N5",
+     "N9",
+     "N8",
+     "N4",
+     "N3",
+     "Base"
+    ],
+    "message": "The optimal tour takes 107 minutes, leaving 13 minutes of crafting time: the 14-slot crafting plan is infeasible, so there is no total score."
+   },
+   "steps": []
+  },
+  "pipeline_nn": {
+   "status": "infeasible",
+   "answer": {
+    "tour_time": 111,
+    "craft_time": 9,
+    "combat": 427,
+    "crafting": null,
+    "total": null,
+    "route_policy": "nearest_neighbour",
+    "tour": [
+     "Base",
+     "N3",
+     "N4",
+     "N8",
+     "N2",
+     "N6",
+     "N1",
+     "N7",
+     "N5",
+     "N9",
+     "Base"
+    ],
+    "message": "The nearest-neighbour tour takes 111 minutes, leaving 9 minutes of crafting time: the 14-slot crafting plan is infeasible, so there is no total score."
+   },
+   "steps": []
+  }
+ },
+ "_note": "Generated from the real backend (GET /api/experiments/map, /api/route, /api/hull, /api/assign, /api/pipeline) for benchmark rows 1 and 12; route/assign steps trimmed."
+}

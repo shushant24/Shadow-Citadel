@@ -11,34 +11,40 @@ import ResourceMeters from "./loadout/ResourceMeters.jsx";
 import SensitivityPanel from "./loadout/SensitivityPanel.jsx";
 import TableauView from "./loadout/TableauView.jsx";
 
-export default function LoadoutTab({ scenario }) {
+export default function LoadoutTab({ scenario, benchmark = null }) {
   const [method, setMethod] = useState("bigm");
   const [showTableau, setShowTableau] = useState(true);
 
-  // 1. Live Tour Time & Combat Score from api.pipeline
+  // 1. Live Tour Time & Combat Score from api.pipeline (no demo fallback: wait for the answer)
   const [livePipeline, setLivePipeline] = useState(null);
+  const [pipelineError, setPipelineError] = useState(null);
 
   useEffect(() => {
     let active = true;
+    setLivePipeline(null);
+    setPipelineError(null);
     api.pipeline(scenario, "optimal")
       .then((res) => {
         if (active && res?.answer) {
           setLivePipeline(res.answer);
         }
       })
-      .catch(() => {
-        // Fallback gracefully to fixture defaults if offline / pipeline unavailable
+      .catch((err) => {
+        if (active) setPipelineError(err?.message || "Pipeline unavailable");
       });
     return () => {
       active = false;
     };
   }, [scenario]);
 
-  const liveTourTime = livePipeline?.tour_time ?? 70;
-  const liveCombatScore = livePipeline?.combat ?? 445;
+  const liveTourTime = livePipeline?.tour_time ?? null;
+  const liveCombatScore = livePipeline?.combat ?? null;
 
-  // 2. Derive crafting time from scenario.total_time minus live tour time
-  const derivedCraftTime = Math.max(0, (scenario?.total_time ?? 120) - liveTourTime);
+  // 2. Derive crafting time from scenario.total_time minus live tour time (null until known)
+  const derivedCraftTime =
+    liveTourTime != null && scenario?.total_time != null
+      ? Math.max(0, scenario.total_time - liveTourTime)
+      : null;
 
   // Custom slider override
   const [customTime, setCustomTime] = useState(null);
@@ -51,14 +57,26 @@ export default function LoadoutTab({ scenario }) {
     setSliderDraft(activeCraftTime);
   }, [activeCraftTime]);
 
+  // Slider range: the demo's 30-70 minutes, widened to cover this scenario's crafting time
+  const sliderMin = Math.max(0, Math.min(30, Math.floor((derivedCraftTime ?? 30) / 5) * 5));
+  const sliderMax = Math.max(70, Math.ceil((derivedCraftTime ?? 70) / 5) * 5);
+
   // Reset custom time override when scenario.total_time or tour time changes
+  // (a tour time arriving for the first time is not a change, so an early preset click survives).
+  const lastTourRef = useRef(null);
+  const lastTotalRef = useRef(scenario?.total_time);
   useEffect(() => {
-    setCustomTime(null);
+    if (liveTourTime == null) return;
+    const tourChanged = lastTourRef.current != null && lastTourRef.current !== liveTourTime;
+    const totalChanged = lastTotalRef.current !== scenario?.total_time;
+    lastTourRef.current = liveTourTime;
+    lastTotalRef.current = scenario?.total_time;
+    if (tourChanged || totalChanged) setCustomTime(null);
   }, [scenario?.total_time, liveTourTime]);
 
   // 200ms debounce on slider change to avoid spamming api.craft
   useEffect(() => {
-    if (sliderDraft === activeCraftTime) return;
+    if (sliderDraft == null || sliderDraft === activeCraftTime) return;
     const timer = setTimeout(() => {
       setCustomTime(sliderDraft);
     }, 200);
@@ -137,6 +155,7 @@ export default function LoadoutTab({ scenario }) {
   };
 
   useEffect(() => {
+    if (activeCraftTime == null) return; // tour time not known yet
     fetchCraft(activeCraftTime, method, activeLimits);
   }, [activeCraftTime, method, scenario?.recipes, activeLimits]);
 
@@ -153,6 +172,7 @@ export default function LoadoutTab({ scenario }) {
   const isTwoPhasePreset = activeCraftTime === 50 && method === "twophase";
 
   const isCustomTimeActive = customTime !== null && customTime !== derivedCraftTime;
+  const showDemoPresets = !benchmark; // the 50 / 42 / 40 minute cases belong to the demo scenario
 
   // In fixture mode, canned data is solved at 50 min, 42 min, or 40 min
   const effectiveTimeLimit = USE_FIXTURES
@@ -191,8 +211,9 @@ export default function LoadoutTab({ scenario }) {
 
       {/* Preset Buttons & Controls */}
       <div className="loadout-controls-card">
+        {showDemoPresets && (
         <div className="loadout-presets-row">
-          <span className="presets-label">Quick Scenarios:</span>
+          <span className="presets-label">Demo presets:</span>
           <div className="presets-btn-group">
             <button
               type="button"
@@ -228,14 +249,23 @@ export default function LoadoutTab({ scenario }) {
             </button>
           </div>
         </div>
+        )}
+
+        {pipelineError && derivedCraftTime == null && (
+          <div className="alert alert-warn" role="alert">
+            Could not get the tour time from /api/pipeline ({pipelineError}). Move the slider to solve for a chosen crafting time.
+          </div>
+        )}
 
         {/* Time Slider Panel */}
         <div className="loadout-slider-container">
           <div className="slider-header-row">
             <label htmlFor="craft-time-slider" className="slider-label">
               <strong>Available Crafting Time:</strong>{" "}
-              <span className="slider-val-highlight">{sliderDraft} minutes</span>
-              {sliderDraft < minCraftTimeNeeded && (
+              <span className="slider-val-highlight">
+                {sliderDraft != null ? `${sliderDraft} minutes` : "waiting for tour time…"}
+              </span>
+              {sliderDraft != null && sliderDraft < minCraftTimeNeeded && (
                 <span className="slider-warn-tag"> (Infeasible Region: &lt; {minCraftTimeNeeded} min)</span>
               )}
               {isCustomTimeActive && (
@@ -243,7 +273,7 @@ export default function LoadoutTab({ scenario }) {
               )}
             </label>
 
-            {isCustomTimeActive && (
+            {isCustomTimeActive && derivedCraftTime != null && (
               <button
                 type="button"
                 className="btn btn-xs btn-secondary"
@@ -261,22 +291,35 @@ export default function LoadoutTab({ scenario }) {
           <input
             id="craft-time-slider"
             type="range"
-            min={30}
-            max={70}
+            min={sliderMin}
+            max={sliderMax}
             step={1}
-            value={sliderDraft}
+            value={sliderDraft ?? sliderMin}
             onChange={(e) => setSliderDraft(Number(e.target.value))}
             className="step-scrubber loadout-time-slider"
             aria-label="Available Crafting Time Slider"
           />
 
-          <div className="slider-ticks-row">
-            <span>30 min</span>
-            <span className="tick-infeasible">40 min (Naive Route)</span>
-            <span className="tick-boundary">42 min (Min Feasible)</span>
-            <span className="tick-optimal">50 min (Optimal)</span>
-            <span>70 min</span>
-          </div>
+          {showDemoPresets ? (
+            <div className="slider-ticks-row">
+              <span>30 min</span>
+              <span className="tick-infeasible">40 min (Naive Route)</span>
+              <span className="tick-boundary">42 min (Min Feasible)</span>
+              <span className="tick-optimal">50 min (Optimal)</span>
+              <span>70 min</span>
+            </div>
+          ) : (
+            <div className="slider-ticks-row">
+              <span>{`${sliderMin} min`}</span>
+              <span className="tick-boundary">{`${minCraftTimeNeeded} min (Min Feasible)`}</span>
+              {derivedCraftTime != null && (
+                <span className={derivedCraftTime >= minCraftTimeNeeded ? "tick-optimal" : "tick-infeasible"}>
+                  {`${derivedCraftTime} min (This map's optimal route)`}
+                </span>
+              )}
+              <span>{`${sliderMax} min`}</span>
+            </div>
+          )}
         </div>
 
         {/* Constraint Limits Overrides (Weight, Slots, Stamina, Survival) */}

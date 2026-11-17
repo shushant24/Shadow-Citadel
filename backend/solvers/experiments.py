@@ -68,6 +68,36 @@ def _random_scores(rng: random.Random, n: int, m: int) -> list[list[float]]:
     return [[rng.randint(30, 100) for _ in range(m)] for _ in range(n)]
 
 
+BENCHMARK_MIN_NODES = 8
+BENCHMARK_MAX_NODES = 10
+BENCHMARK_MAX_SEED = 2**31 - 1
+BENCHMARK_N_MAPS = 20
+BENCHMARK_SEED = 0
+
+
+def build_benchmark_map(map_seed: int, n_nodes: int) -> dict[str, Any]:
+    """Rebuild one benchmark map from its seed: the single source used by the 20-map
+    experiment and by GET /api/experiments/map, so the two can never drift apart.
+
+    Returns {"labels", "matrix", "nodes", "scores"}: the `_random_map` geometry plus the
+    5x5 weapon-boss scores drawn from a fresh `random.Random(map_seed)`.
+    """
+    map_data = _random_map(map_seed, n_nodes)
+    map_data["scores"] = _random_scores(random.Random(map_seed), 5, 5)
+    return map_data
+
+
+def _benchmark_schedule(n_maps: int, seed: int) -> list[tuple[int, int]]:
+    """The (map_seed, n_nodes) pairs the experiment draws, in table order."""
+    rng = random.Random(seed)
+    schedule = []
+    for _ in range(n_maps):
+        map_seed = rng.randint(0, BENCHMARK_MAX_SEED)
+        n_nodes = rng.randint(BENCHMARK_MIN_NODES, BENCHMARK_MAX_NODES)
+        schedule.append((map_seed, n_nodes))
+    return schedule
+
+
 @functools.lru_cache(maxsize=1)
 def _load_scenario() -> dict[str, Any]:
     """Load the demo scenario JSON file from disk."""
@@ -157,7 +187,6 @@ def _compute_demo_modules(scenario: dict[str, Any]) -> list[dict[str, Any]]:
 
 @functools.lru_cache(maxsize=32)
 def _run_experiments_cached(n_maps: int = 20, seed: int = 0) -> dict[str, Any]:
-    rng = random.Random(seed)
     scenario = _load_scenario()
     modules = _compute_demo_modules(scenario)
 
@@ -166,20 +195,16 @@ def _run_experiments_cached(n_maps: int = 20, seed: int = 0) -> dict[str, Any]:
     total_assign_gain = 0.0
     total_solver_ms = 0.0
 
-    for _ in range(n_maps):
-        map_seed = rng.randint(0, 2**31 - 1)
-        n_nodes = rng.randint(8, 10)
-
-        map_data = _random_map(map_seed, n_nodes)
+    for map_seed, n_nodes in _benchmark_schedule(n_maps, seed):
+        map_data = build_benchmark_map(map_seed, n_nodes)
         labels = map_data["labels"]
         matrix = map_data["matrix"]
+        scores = map_data["scores"]
 
         # --- TSP: nearest neighbour baseline ---
         _nn_tour, nn_cost = nearest_neighbour(matrix, labels, start=labels[0])
 
-        # --- Assignment: generate random 5x5 scores ---
-        map_rng = random.Random(map_seed)
-        scores = _random_scores(map_rng, 5, 5)
+        # --- Assignment: greedy baseline on the map's 5x5 scores ---
         _greedy_pairs, greedy_total = greedy_assignment(scores)
 
         # --- Solvers: optimal TSP (branch-and-bound) + Hungarian assignment ---
@@ -250,3 +275,58 @@ def run_experiments(n_maps: int = 20, seed: int = 0) -> dict[str, Any]:
 
 
 run_experiments.cache_clear = _run_experiments_cached.cache_clear
+
+
+_EXPECTED_KEYS = ("nn_cost", "opt_cost", "greedy_assign", "opt_assign")
+
+
+def benchmark_map_scenario(map_seed: int, n_nodes: int) -> dict[str, Any]:
+    """Full scenario (same shape as data/scenario.json) for one benchmark map.
+
+    nodes and weapon_boss_scores come from `build_benchmark_map`; total_time, recipes and
+    limits are the demo scenario's. `benchmark.expected` is the cached table row when
+    (map_seed, n_nodes) is one of the 20 benchmark maps, else null. `benchmark.recomputed`
+    holds the same four values solved again on the rebuilt map.
+    """
+    for name, value, lo, hi in (
+        ("seed", map_seed, 0, BENCHMARK_MAX_SEED),
+        ("n_nodes", n_nodes, BENCHMARK_MIN_NODES, BENCHMARK_MAX_NODES),
+    ):
+        if not isinstance(value, int) or isinstance(value, bool) or not lo <= value <= hi:
+            raise ValueError(f"{name} must be an integer in [{lo}, {hi}], got {value!r}")
+
+    demo = _load_scenario()
+    map_data = build_benchmark_map(map_seed, n_nodes)
+    labels, matrix, scores = map_data["labels"], map_data["matrix"], map_data["scores"]
+
+    index = None
+    expected = None
+    rows = _run_experiments_cached(BENCHMARK_N_MAPS, BENCHMARK_SEED)["answer"]["random_maps"]["maps"]
+    for i, row in enumerate(rows, start=1):
+        if row["seed"] == map_seed and row["n_nodes"] == n_nodes:
+            index = i
+            expected = {k: row[k] for k in _EXPECTED_KEYS}
+            break
+
+    recomputed = {
+        "nn_cost": nearest_neighbour(matrix, labels, start=labels[0])[1],
+        "opt_cost": _opt_tour_cost(matrix, labels),
+        "greedy_assign": greedy_assignment(scores)[1],
+        "opt_assign": _opt_assignment_cost(scores),
+    }
+
+    return {
+        "total_time": demo["total_time"],
+        "nodes": {label: list(map_data["nodes"][label]) for label in labels},
+        "loot": {},
+        "weapon_boss_scores": scores,
+        "recipes": copy.deepcopy(demo["recipes"]),
+        "limits": copy.deepcopy(demo["limits"]),
+        "benchmark": {
+            "seed": map_seed,
+            "n_nodes": n_nodes,
+            "index": index,
+            "expected": expected,
+            "recomputed": recomputed,
+        },
+    }

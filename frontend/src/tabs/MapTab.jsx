@@ -3,6 +3,30 @@ import { api, USE_FIXTURES } from "../api.js";
 import { useApi } from "../useApi.js";
 import Status from "../components/Status.jsx";
 import StepPlayer from "../components/StepPlayer.jsx";
+import RaidScore, { minCraftTimeNeeded } from "../components/RaidScore.jsx";
+
+const SUBTOUR_COLORS = ["#ef476f", "#a855f7", "#f97316", "#22c55e", "#eab308"];
+
+/** Coordinates as labels: integers as-is, generated floats to one decimal. */
+function fmtCoord(v) {
+  const n = Number(v);
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+/**
+ * Plot range shared by both axes, from the scenario's points: at least 0..25 (the demo grid),
+ * widened to the next multiple of 5 that covers the data, with the demo's margins (-2 / +1).
+ */
+function mapBounds(points) {
+  const coords = Object.values(points || {}).flatMap((p) => [Number(p[0]), Number(p[1])]).filter(Number.isFinite);
+  const lo = Math.min(0, ...coords);
+  const hi = Math.max(25, ...coords);
+  const tickLo = Math.floor(lo / 5) * 5;
+  const tickHi = Math.ceil(hi / 5) * 5;
+  const ticks = [];
+  for (let v = tickLo; v <= tickHi; v += 5) ticks.push(v);
+  return { min: tickLo - 2, max: tickHi + 1, ticks };
+}
 
 // Cross product of vectors OA and OB
 function crossProduct(o, a, b) {
@@ -230,12 +254,14 @@ export default function MapTab({ scenario }) {
   const [loot, setLoot] = useState(scenario?.loot || {});
   const [liveRouteData, setLiveRouteData] = useState(null);
   const [liveHullData, setLiveHullData] = useState(null);
+  const [livePipeline, setLivePipeline] = useState(null); // { optimal, nearest_neighbour } after a drag
 
   useEffect(() => {
-    if (scenario?.nodes) setNodes(scenario.nodes);
-    if (scenario?.loot) setLoot(scenario.loot);
+    setNodes(scenario?.nodes ?? {});
+    setLoot(scenario?.loot ?? {});
     setLiveRouteData(null);
     setLiveHullData(null);
+    setLivePipeline(null);
   }, [scenario]);
 
   // View state
@@ -262,15 +288,21 @@ export default function MapTab({ scenario }) {
   const isModified = isNodesModified || isLootModified;
 
   // Fetch initial scenario hull and route envelopes
+  // Fetch from the scenario itself, not the `nodes` / `loot` state: when the scenario is replaced
+  // that state still holds the previous map during this render.
   const { loading: hullLoading, error: hullError, data: hullData } = useApi(
-    () => api.hull(allPoints),
+    () => api.hull({ ...(scenario?.nodes || {}), ...(scenario?.loot || {}) }),
     [scenario?.nodes, scenario?.loot]
   );
 
   const { loading: routeLoading, error: routeError, data: routeData } = useApi(
-    () => api.route({ points: nodes }),
+    () => api.route({ points: scenario?.nodes || {} }),
     [scenario?.nodes]
   );
+
+  // Chained raid score (tour -> crafting time -> combat + crafting) for the active scenario
+  const pipeOpt = useApi(() => api.pipeline(scenario, "optimal"), [scenario]);
+  const pipeNN = useApi(() => api.pipeline(scenario, "nearest_neighbour"), [scenario]);
 
   // Compute live values when dragging
   const localHull = useMemo(() => computeLocalHull(allPoints), [allPoints]);
@@ -311,13 +343,10 @@ export default function MapTab({ scenario }) {
 
   const getNodeCoord = (name) => nodes[name] || loot[name] || [0, 0];
 
-  // Subtours from first Hungarian pass
+  // Subtours from the first Hungarian pass, as reported by /api/route (none until it answers)
   const rawSubtours = (isNodesModified && liveRouteData?.answer?.first_subtours)
     ? liveRouteData.answer.first_subtours
-    : (routeData?.answer?.first_subtours || [
-        ["Base", "C7", "C5"],
-        ["C1", "C6", "C3", "C4", "C2"],
-      ]);
+    : (routeData?.answer?.first_subtours ?? []);
 
   // Ensure subtours are closed loops and compute individual & total costs dynamically
   const subtoursInfo = useMemo(() => {
@@ -346,18 +375,23 @@ export default function MapTab({ scenario }) {
     return subtoursInfo.reduce((acc, sub) => acc + sub.cost, 0);
   }, [subtoursInfo, isNodesModified, routeData]);
 
-  // SVG coordinate transformation
+  // SVG coordinate transformation. The range follows the scenario's points (not the dragged
+  // ones, so the grid stays still while dragging): demo 0..25, benchmark maps up to 30.
   const viewBoxWidth = 840;
   const viewBoxHeight = 600;
   const padding = 55;
-  const minX = -2;
-  const maxX = 26;
-  const minY = -2;
-  const maxY = 26;
+  const bounds = useMemo(
+    () => mapBounds({ ...(scenario?.nodes || {}), ...(scenario?.loot || {}) }),
+    [scenario?.nodes, scenario?.loot]
+  );
+  const minX = bounds.min;
+  const maxX = bounds.max;
+  const minY = bounds.min;
+  const maxY = bounds.max;
 
   const toSvgX = useCallback(
     (x) => padding + ((x - minX) / (maxX - minX)) * (viewBoxWidth - 2 * padding),
-    []
+    [minX, maxX]
   );
 
   const toSvgY = useCallback(
@@ -365,13 +399,13 @@ export default function MapTab({ scenario }) {
       viewBoxHeight -
       padding -
       ((y - minY) / (maxY - minY)) * (viewBoxHeight - 2 * padding),
-    []
+    [minY, maxY]
   );
 
   const toWorldX = useCallback((svgX) => {
     const clampedX = Math.max(padding, Math.min(viewBoxWidth - padding, svgX));
     return Math.round(minX + ((clampedX - padding) / (viewBoxWidth - 2 * padding)) * (maxX - minX));
-  }, []);
+  }, [minX, maxX]);
 
   const toWorldY = useCallback((svgY) => {
     const clampedY = Math.max(padding, Math.min(viewBoxHeight - padding, svgY));
@@ -380,7 +414,7 @@ export default function MapTab({ scenario }) {
         ((viewBoxHeight - padding - clampedY) / (viewBoxHeight - 2 * padding)) *
           (maxY - minY)
     );
-  }, []);
+  }, [minY, maxY]);
 
   // Dragging event handlers
   const handlePointerDown = (name, isLoot, e) => {
@@ -429,6 +463,10 @@ export default function MapTab({ scenario }) {
       if (!USE_FIXTURES) {
         if (!active.isLoot) {
           api.route({ points: nodes }).then(setLiveRouteData).catch(console.error);
+          const moved = { ...scenario, nodes };
+          Promise.all([api.pipeline(moved, "optimal"), api.pipeline(moved, "nearest_neighbour")])
+            .then(([optimal, nearest_neighbour]) => setLivePipeline({ optimal, nearest_neighbour }))
+            .catch(console.error);
         }
         api.hull({ ...nodes, ...loot }).then(setLiveHullData).catch(console.error);
       }
@@ -436,10 +474,11 @@ export default function MapTab({ scenario }) {
   };
 
   const handleResetCoordinates = () => {
-    if (scenario?.nodes) setNodes(scenario.nodes);
-    if (scenario?.loot) setLoot(scenario.loot);
+    setNodes(scenario?.nodes ?? {});
+    setLoot(scenario?.loot ?? {});
     setLiveRouteData(null);
     setLiveHullData(null);
+    setLivePipeline(null);
   };
 
   // Hull polygon points
@@ -453,13 +492,27 @@ export default function MapTab({ scenario }) {
       .join(" ");
   }, [hullVertices, nodes, loot, toSvgX, toSvgY]);
 
-  // Raid time budget calculations (Section 4 Stage 4 dependency: minimum 42 min required for feasibility)
+  // Raid time budget: crafting needs at least slots x fastest recipe minutes (42 on the demo)
   const totalRaidTime = scenario?.total_time ?? 120;
   const optimalTimeLeft = Math.max(0, totalRaidTime - optimalCost);
   const nnTimeLeft = Math.max(0, totalRaidTime - nnCost);
   const timeSaved = nnCost - optimalCost;
   const timeSavedPercent = nnCost > 0 ? (((nnCost - optimalCost) / nnCost) * 100).toFixed(1) : "0.0";
-  const minFeasibleCraftTime = 42;
+  const minFeasibleCraftTime = minCraftTimeNeeded(scenario) ?? 0;
+
+  // Pipeline results: after a committed drag (live mode) the moved map's, otherwise the scenario's
+  const usingMoved = isNodesModified && livePipeline !== null;
+  const pipelineCards = {
+    optimal: usingMoved
+      ? { result: livePipeline.optimal, loading: false, error: null }
+      : { result: pipeOpt.data, loading: pipeOpt.loading, error: pipeOpt.error },
+    nearest_neighbour: usingMoved
+      ? { result: livePipeline.nearest_neighbour, loading: false, error: null }
+      : { result: pipeNN.data, loading: pipeNN.loading, error: pipeNN.error },
+  };
+  const optPipe = pipelineCards.optimal.result;
+  const optCraftScore =
+    optPipe?.status === "optimal" && optPipe.answer?.crafting != null ? optPipe.answer.crafting : null;
 
   return (
     <section className="panel map-tab-panel" aria-label="Map">
@@ -525,11 +578,34 @@ export default function MapTab({ scenario }) {
           </div>
         </div>
 
+        {/* Raid score: Stage 2 tour time chained into Stage 4 crafting (/api/pipeline) */}
+        <div className="map-raid-scores" aria-label="Raid score">
+          <RaidScore
+            label="Raid score · optimal route"
+            minNeeded={minFeasibleCraftTime}
+            testId="raid-score-optimal"
+            {...pipelineCards.optimal}
+          />
+          <RaidScore
+            label="Raid score · nearest-neighbour route"
+            minNeeded={minFeasibleCraftTime}
+            testId="raid-score-nn"
+            {...pipelineCards.nearest_neighbour}
+          />
+          {isNodesModified && !usingMoved && (
+            <p className="raid-score-note text-muted">
+              {USE_FIXTURES
+                ? "Scores are for the original positions (fixture mode does not recompute)."
+                : "Release the point to recompute the raid score for the moved map."}
+            </p>
+          )}
+        </div>
+
         {/* Chaining Notice */}
         <div className="chaining-callout">
           <span className="callout-icon">⚡</span>
           <div>
-            <strong>Stage 2 feeds Stage 4:</strong> The {totalRaidTime}-minute limit leaves <strong>{optimalTimeLeft} min</strong> with the {optimalCost}-minute optimal tour ({optimalTimeLeft >= minFeasibleCraftTime ? "Z = 117 feasible score" : "infeasible crafting plan"}).
+            <strong>Stage 2 feeds Stage 4:</strong> The {totalRaidTime}-minute limit leaves <strong>{optimalTimeLeft} min</strong> with the {optimalCost}-minute optimal tour ({optCraftScore != null ? `crafting Z = ${optCraftScore}` : optimalTimeLeft >= minFeasibleCraftTime ? "crafting plan feasible" : "infeasible crafting plan"}).
             With the {nnCost}-minute nearest-neighbour tour, only <strong>{nnTimeLeft} min</strong> remain, making the crafting plan{" "}
             <span className={nnTimeLeft >= minFeasibleCraftTime ? "badge-ok" : "badge-danger"}>
               {nnTimeLeft >= minFeasibleCraftTime ? "FEASIBLE" : "INFEASIBLE"}
@@ -579,9 +655,14 @@ export default function MapTab({ scenario }) {
               type="button"
               className={`pill-btn pill-danger ${showSubtours ? "active" : ""}`}
               onClick={() => setShowSubtours(!showSubtours)}
-              title="Show first Hungarian relaxation disjoint subtours"
+              disabled={subtoursInfo.length === 0}
+              title={
+                subtoursInfo.length === 0
+                  ? "The first Hungarian pass already gave a single tour (or the route is still loading)"
+                  : "Show first Hungarian relaxation disjoint subtours"
+              }
             >
-              Subtours ({subtourTotalCost}m)
+              {subtoursInfo.length > 0 ? `Subtours (${subtourTotalCost}m)` : "Subtours (none)"}
             </button>
             <button
               type="button"
@@ -594,7 +675,7 @@ export default function MapTab({ scenario }) {
         </div>
 
         {/* Subtour Alert Banner */}
-        {showSubtours && (
+        {showSubtours && subtoursInfo.length > 0 && (
           <div className="subtours-explanation-banner">
             <div className="banner-title">
               ⚠️ Hungarian Relaxation Subtours (Pass 1 Cost: {subtourTotalCost} minutes)
@@ -710,7 +791,7 @@ export default function MapTab({ scenario }) {
                 strokeDasharray="4 4"
               />
 
-              {[0, 5, 10, 15, 20, 25].map((val) => (
+              {bounds.ticks.map((val) => (
                 <g key={`grid-tick-${val}`}>
                   <text
                     x={toSvgX(val)}
@@ -746,8 +827,8 @@ export default function MapTab({ scenario }) {
                     strokeDasharray="6 4"
                   />
                   <text
-                    x={toSvgX(12)}
-                    y={toSvgY(22)}
+                    x={toSvgX((minX + maxX) / 2)}
+                    y={toSvgY(maxY) + 14}
                     fill="#a78bfa"
                     fontSize="11"
                     fontWeight="600"
@@ -763,8 +844,8 @@ export default function MapTab({ scenario }) {
               {showSubtours && (
                 <g className="subtours-group">
                   {subtoursInfo.map((subInfo, sIdx) => {
-                    const color = sIdx === 0 ? "#ef476f" : "#a855f7";
-                    const markerId = sIdx === 0 ? "arrow-sub1" : "arrow-sub2";
+                    const color = SUBTOUR_COLORS[sIdx % SUBTOUR_COLORS.length];
+                    const markerId = sIdx % 2 === 0 ? "arrow-sub1" : "arrow-sub2";
                     const segments = [];
                     const closed = subInfo.closed;
 
@@ -896,7 +977,7 @@ export default function MapTab({ scenario }) {
                         fontFamily="monospace"
                         textAnchor="middle"
                       >
-                        {name + " (" + x + "," + y + ")"}
+                        {name + " (" + fmtCoord(x) + "," + fmtCoord(y) + ")"}
                       </text>
                     </g>
                   );
@@ -965,7 +1046,7 @@ export default function MapTab({ scenario }) {
                         fontFamily="monospace"
                         textAnchor="middle"
                       >
-                        {name + " (" + x + "," + y + ")"}
+                        {name + " (" + fmtCoord(x) + "," + fmtCoord(y) + ")"}
                       </text>
                     </g>
                   );
@@ -987,8 +1068,8 @@ export default function MapTab({ scenario }) {
                   <text x="0" y="4" fill="#38bdf8" fontSize="10" fontFamily="monospace" textAnchor="middle">
                     {draggedNode.name + ": (" +
                       (draggedNode.isLoot
-                        ? loot[draggedNode.name][0] + ", " + loot[draggedNode.name][1]
-                        : nodes[draggedNode.name][0] + ", " + nodes[draggedNode.name][1]) +
+                        ? fmtCoord(loot[draggedNode.name][0]) + ", " + fmtCoord(loot[draggedNode.name][1])
+                        : fmtCoord(nodes[draggedNode.name][0]) + ", " + fmtCoord(nodes[draggedNode.name][1])) +
                       ")"}
                   </text>
                 </g>

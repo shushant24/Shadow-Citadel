@@ -18,6 +18,11 @@ import experimentsFx from "@fixtures/experiments.json";
 
 export const USE_FIXTURES = import.meta.env.VITE_USE_FIXTURES !== "false";
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+/** Where live requests go: "" means same origin (production, via the Vercel /api rewrite; dev, via the Vite proxy). */
+export const API_BASE_URL = BASE_URL;
+
+/** Tooltip for controls that only work against the live backend. */
+export const NEEDS_LIVE_BACKEND = "needs live backend (set VITE_USE_FIXTURES=false)";
 
 /** Extra canned results for tabs that want to demo a special case (Matchups: the cover/adjust loop). */
 export const FIXTURE_EXTRAS = { assignAdjust: assignAdjustFx, assignAdjustMin: assignAdjustMinFx };
@@ -84,4 +89,13 @@ export const api = {
       : live("POST", `/api/pipeline?route=${route}`, scenario),
 
   experiments: () => (USE_FIXTURES ? later(experimentsFx) : live("GET", "/api/experiments")),
+
+  /** Rebuild one benchmark map from its seed: a full scenario plus `benchmark` metadata. Live backend only. */
+  benchmarkMap: (seed, nNodes) =>
+    USE_FIXTURES
+      ? Promise.reject(new Error(`Benchmark maps ${NEEDS_LIVE_BACKEND}.`))
+      : live(
+          "GET",
+          `/api/experiments/map?seed=${encodeURIComponent(seed)}&n_nodes=${encodeURIComponent(nNodes)}`
+        ),
 };

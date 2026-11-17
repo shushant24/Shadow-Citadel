@@ -8,6 +8,7 @@ import { useApi } from "../useApi.js";
 import Status from "../components/Status.jsx";
 import ModuleComparisonCard from "./summary/ModuleComparisonCard.jsx";
 import BenchmarkTable from "./summary/BenchmarkTable.jsx";
+import ReproducibilityCard from "./summary/ReproducibilityCard.jsx";
 import ReportExportView from "./summary/ReportExportView.jsx";
 import { formatGainPct } from "./summary/formatters.js";
 
@@ -50,7 +51,7 @@ const CANONICAL_MODULES_FALLBACK = [
   },
 ];
 
-export default function SummaryTab({ scenario }) {
+export default function SummaryTab({ scenario, benchmark = null, onLoadScenario }) {
   const [viewMode, setViewMode] = useState("dashboard"); // "dashboard" | "export"
   const { loading, error, data } = useApi(() => api.experiments(), [scenario]);
 
@@ -142,7 +143,16 @@ export default function SummaryTab({ scenario }) {
           />
         ) : (
           <div className="summary-content" data-testid="summary-dashboard">
-            {/* 1. Headline Scorecards Grid */}
+            {/* 0. Loaded benchmark map: table values vs live solvers */}
+            {benchmark && <ReproducibilityCard scenario={scenario} benchmark={benchmark} />}
+
+            {/* 1. Headline Scorecards Grid (computed by the backend from the demo scenario) */}
+            <div className="section-title-bar">
+              <h3>Demo scenario</h3>
+              <span className="section-tag">
+                {benchmark ? "Reference results for data/scenario.json, not the loaded map" : "data/scenario.json"}
+              </span>
+            </div>
             <div className="stat-grid summary-stat-grid">
               {/* Total Score Card */}
               <div className="stat-card total-score-card">
@@ -216,7 +226,7 @@ export default function SummaryTab({ scenario }) {
             <section className="summary-modules-section">
               <div className="section-title-bar">
                 <h3>Stage-by-Stage Optimization Gains</h3>
-                <span className="section-tag">Naive Policy vs. Global Mathematical Optimum</span>
+                <span className="section-tag">Demo scenario · Naive Policy vs. Global Mathematical Optimum</span>
               </div>
 
               <div className="summary-modules-grid">
@@ -228,7 +238,11 @@ export default function SummaryTab({ scenario }) {
 
             {/* 4. 20-Map Monte Carlo Benchmark Section */}
             <section className="summary-benchmark-container">
-              <BenchmarkTable randomMaps={randomMaps} />
+              <BenchmarkTable
+                randomMaps={randomMaps}
+                onLoadScenario={onLoadScenario}
+                activeSeed={benchmark?.seed ?? null}
+              />
             </section>
           </div>
         )}

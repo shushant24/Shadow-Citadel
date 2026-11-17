@@ -35,6 +35,7 @@ Every endpoint except `GET /api/scenario` returns
 | `POST /api/craft` | `{"time_limit", "recipes", "limits", "method"}` | `x`, `z`, `shadow_prices`, `binding`, `method`, `constraint_names`, `bottleneck` | one tableau (below) |
 | `POST /api/pipeline?route=optimal\|nearest_neighbour` | the scenario | `tour_time`, `craft_time`, `combat`, `crafting`, `total`, `route_policy`, `tour` | none |
 | `GET /api/experiments` | none | `modules`, `random_maps` | none |
+| `GET /api/experiments/map?seed=<int>&n_nodes=<8..10>` | none | a scenario (not an envelope, like `/api/scenario`) plus `benchmark` | none |
 
 ### `/api/hull`
 Step: `{"action": "push"|"pop"|"skip", "point": "L4", "stack": ["Base","L4"]}`. The last step's `stack` equals `vertices` (counter-clockwise, starting at Base). Graham scan emits push/pop; Jarvis march may emit only push/skip. `interior` = every point that is not a vertex.
@@ -94,6 +95,22 @@ Step (one per tableau: iteration 0 = initial, one per pivot, last = final):
  "steps": []}
 ```
 `random_maps` is `null` until Part 10 computes it; `naive` and `gain_pct` are `null` for Crafting and Whole pipeline until then (the whole-pipeline naive result is "infeasible", see `pipeline_naive.json`). Parts 9 and 10 owners may extend the per-map fields; update `contract.py`, the fixture and the test in the same PR.
+
+### `/api/experiments/map`
+Rebuilds one benchmark map from its seed with `solvers.experiments.build_benchmark_map` (the same function the 20-map table uses) and returns it as a scenario the frontend can load in place of the demo:
+
+```json
+{"total_time": 120, "nodes": {"Base": [x, y], "N1": [x, y], "...": "..."}, "loot": {},
+ "weapon_boss_scores": [[5x5 ints in 30..100]], "recipes": {"...": "demo"}, "limits": {"...": "demo"},
+ "benchmark": {"seed": 1654615998, "n_nodes": 9, "index": 1,
+               "expected":   {"nn_cost": 72, "opt_cost": 70, "greedy_assign": 401, "opt_assign": 408},
+               "recomputed": {"nn_cost": 72, "opt_cost": 70, "greedy_assign": 401, "opt_assign": 408}}}
+```
+- `nodes` are the raw generated coordinates (uniform floats in 0..30), labels `Base, N1..N{n-1}`; `total_time`, `recipes`, `limits` are copied from `data/scenario.json`.
+- `index` (1-20) and `expected` (the cached table row) are `null` when `(seed, n_nodes)` is not one of the 20 benchmark maps. `recomputed` is always present: the four values solved again on the rebuilt map (the frontend uses it for the greedy baseline, which has no endpoint of its own).
+- `seed` must be an integer in `0..2^31-1` and `n_nodes` in `8..10`, otherwise HTTP 422.
+- Posting `nodes` to `/api/route` (`points` form) reproduces `opt_cost` and `nearest_neighbour.cost`; posting the scenario to `/api/pipeline` gives the map's chained score (about 8 of the 20 maps leave less than `slots x fastest recipe` = 42 min of crafting and return `infeasible`). `tests/test_benchmark_map.py` checks all 20 rows.
+- Fixture mode has no canned answer for this endpoint; the "View map" button is disabled there.
 
 ## Fixture mode
 `frontend/.env` with `VITE_USE_FIXTURES=true` (default) makes the API client answer from `fixtures/*.json`. Fixtures are **canned**: they cover the plan's cases (see `FIXTURE_LIMITS` in `frontend/src/api.js`), so sliders, edits and dragging do not recompute offline. For a live demo run the backend locally and set `VITE_USE_FIXTURES=false`; keep fixture mode as the fallback for the static parts.

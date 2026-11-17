@@ -8,7 +8,7 @@ const RECIPE_META = [
   { name: "Shield Scroll", varName: "x4", icon: "🛡️", baseScore: 7 },
 ];
 
-export default function PlanCard({ answer, combatScore = 445, recipes, limits }) {
+export default function PlanCard({ answer, combatScore = null, recipes, limits }) {
   if (!answer) return null;
 
   const maxSlots = limits?.slots ?? 14;
@@ -29,7 +29,7 @@ export default function PlanCard({ answer, combatScore = 445, recipes, limits })
 
         <div className="stat-card loadout-stat-card">
           <span className="stat-label">Combat Score</span>
-          <div className="stat-value loadout-score-combat">{formatNum(combatScore)}</div>
+          <div className="stat-value loadout-score-combat">{combatScore != null ? formatNum(combatScore) : "-"}</div>
           <span className="stat-subtext">Stage 3 Hungarian assignment</span>
         </div>
 
